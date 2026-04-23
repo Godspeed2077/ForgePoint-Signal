@@ -8,10 +8,18 @@ app.use(cors());
 app.use(express.json());
 
 const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
+const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const anonKey = process.env.SUPABASE_ANON_KEY;
+const supabaseKey = serviceRoleKey || anonKey;
+const usingServiceRole = Boolean(serviceRoleKey);
 
 if (!supabaseUrl || !supabaseKey) {
   console.warn('Supabase env vars missing: set SUPABASE_URL and SUPABASE_ANON_KEY (or SUPABASE_SERVICE_ROLE_KEY).');
+} else {
+  console.log(`Supabase client initialized (role=${usingServiceRole ? 'service_role' : 'anon'}, url=${supabaseUrl})`);
+  if (!usingServiceRole) {
+    console.warn('WARNING: SUPABASE_SERVICE_ROLE_KEY not set. Writes to /entries will be blocked by RLS.');
+  }
 }
 
 const supabase = createClient(supabaseUrl || '', supabaseKey || '');
@@ -60,6 +68,14 @@ app.post('/entries', requireIngestKey, async (req, res) => {
     return res.status(400).json({ error: 'title and source_url are required' });
   }
 
+  if (!usingServiceRole) {
+    return res.status(500).json({
+      error: 'Server is using the anon key; writes are blocked by RLS. Set SUPABASE_SERVICE_ROLE_KEY and redeploy.',
+    });
+  }
+
+  console.log(`POST /entries: source_url=${row.source_url} title="${String(row.title).slice(0, 60)}"`);
+
   const { data, error } = await supabase
     .from('regulatory_entries')
     .upsert(row, { onConflict: 'source_url' })
@@ -67,8 +83,10 @@ app.post('/entries', requireIngestKey, async (req, res) => {
     .single();
 
   if (error) {
-    return res.status(500).json({ error: error.message });
+    console.error(`  supabase error: ${error.code} ${error.message} ${error.details || ''}`);
+    return res.status(500).json({ error: error.message, code: error.code, details: error.details });
   }
+  console.log(`  upserted id=${data?.id}`);
   res.status(201).json(data);
 });
 

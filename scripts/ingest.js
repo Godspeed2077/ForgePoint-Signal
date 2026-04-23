@@ -35,12 +35,19 @@ async function fetchFederalRegister(term, since) {
   for (const f of FIELDS) params.append('fields[]', f);
 
   const url = `${FEDERAL_REGISTER_ENDPOINT}?${params.toString()}`;
+  console.log(`  GET ${url}`);
   const res = await fetch(url);
   if (!res.ok) {
     throw new Error(`Federal Register API ${res.status}: ${await res.text()}`);
   }
   const json = await res.json();
-  return json.results || [];
+  const results = json.results || [];
+  console.log(`    term="${term}" -> count=${json.count ?? 'n/a'} results=${results.length}`);
+  if (results.length > 0) {
+    const sample = results[0];
+    console.log(`    first: ${sample.document_number} "${(sample.title || '').slice(0, 70)}" (${sample.publication_date})`);
+  }
+  return results;
 }
 
 function dedupeByDocumentNumber(docs) {
@@ -107,11 +114,13 @@ async function extractWithClaude(client, doc) {
 
   const textBlock = response.content.find((b) => b.type === 'text');
   if (!textBlock) throw new Error('No text block in Claude response');
+  console.log(`    claude raw (${textBlock.text.length} chars): ${textBlock.text.replace(/\s+/g, ' ').slice(0, 200)}`);
   return parseExtraction(textBlock.text);
 }
 
 async function postEntry(apiBase, apiKey, entry) {
-  const res = await fetch(`${apiBase.replace(/\/+$/, '')}/entries`, {
+  const url = `${apiBase.replace(/\/+$/, '')}/entries`;
+  const res = await fetch(url, {
     method: 'POST',
     headers: {
       'content-type': 'application/json',
@@ -119,11 +128,12 @@ async function postEntry(apiBase, apiKey, entry) {
     },
     body: JSON.stringify(entry),
   });
+  const body = await res.text();
   if (!res.ok) {
-    const body = await res.text();
-    throw new Error(`POST /entries ${res.status}: ${body}`);
+    throw new Error(`POST ${url} ${res.status}: ${body}`);
   }
-  return res.json();
+  console.log(`    POST ${res.status} -> ${body.slice(0, 120)}`);
+  return body ? JSON.parse(body) : null;
 }
 
 async function main() {
@@ -140,18 +150,31 @@ async function main() {
 
   const client = new Anthropic({ apiKey: anthropicKey });
 
+  console.log(`Config: apiBase=${apiBase} lookback=${lookback}d since=${since} terms=${JSON.stringify(SEARCH_TERMS)}`);
   console.log(`Fetching Federal Register documents since ${since}...`);
   const batches = await Promise.all(SEARCH_TERMS.map((term) => fetchFederalRegister(term, since)));
   const docs = dedupeByDocumentNumber(batches.flat());
-  console.log(`Found ${docs.length} unique documents across ${SEARCH_TERMS.length} search terms.`);
+  console.log(`Found ${docs.length} unique documents across ${SEARCH_TERMS.length} search terms (before filtering).`);
+
+  if (docs.length === 0) {
+    console.log('No documents matched. Done.');
+    return;
+  }
 
   let created = 0;
   let failed = 0;
 
+  let skipped = 0;
   for (const doc of docs) {
-    if (!doc.html_url || !doc.title) continue;
+    if (!doc.html_url || !doc.title) {
+      skipped += 1;
+      console.log(`  SKIP ${doc.document_number}: missing html_url or title`);
+      continue;
+    }
+    console.log(`\nProcessing ${doc.document_number}: "${doc.title.slice(0, 70)}"`);
     try {
       const extracted = await extractWithClaude(client, doc);
+      console.log(`    parsed: impact=${extracted.impact_level} effective=${extracted.effective_date} summary_chars=${extracted.summary?.length ?? 0}`);
       const agencyNames = (doc.agencies || []).map((a) => a.name).filter(Boolean);
       const entry = {
         published_date: doc.publication_date || null,
@@ -173,14 +196,13 @@ async function main() {
       };
       await postEntry(apiBase, apiKey, entry);
       created += 1;
-      console.log(`  [${created}] ${doc.document_number}: ${doc.title.slice(0, 80)}`);
     } catch (err) {
       failed += 1;
       console.error(`  FAIL ${doc.document_number}: ${err.message}`);
     }
   }
 
-  console.log(`\nDone. Created/updated: ${created}. Failed: ${failed}.`);
+  console.log(`\nDone. Fetched: ${docs.length}. Created/updated: ${created}. Skipped: ${skipped}. Failed: ${failed}.`);
 }
 
 main().catch((err) => {

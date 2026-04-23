@@ -18,6 +18,9 @@ create table if not exists public.regulatory_entries (
   raw_json        jsonb
 );
 
+create unique index if not exists regulatory_entries_source_url_uniq
+  on public.regulatory_entries (source_url);
+
 create index if not exists regulatory_entries_published_date_idx
   on public.regulatory_entries (published_date desc);
 

@@ -22,6 +22,56 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok' });
 });
 
+function requireIngestKey(req, res, next) {
+  const expected = process.env.INGEST_API_KEY;
+  if (!expected) {
+    return res.status(503).json({ error: 'Ingestion not configured' });
+  }
+  if (req.get('x-api-key') !== expected) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+  next();
+}
+
+const ALLOWED_FIELDS = [
+  'published_date',
+  'source',
+  'jurisdiction',
+  'category',
+  'title',
+  'summary',
+  'source_url',
+  'effective_date',
+  'impact_level',
+  'raw_json',
+];
+
+app.post('/entries', requireIngestKey, async (req, res) => {
+  const body = req.body;
+  if (!body || typeof body !== 'object') {
+    return res.status(400).json({ error: 'Body must be a JSON object' });
+  }
+
+  const row = {};
+  for (const key of ALLOWED_FIELDS) {
+    if (body[key] !== undefined) row[key] = body[key];
+  }
+  if (!row.title || !row.source_url) {
+    return res.status(400).json({ error: 'title and source_url are required' });
+  }
+
+  const { data, error } = await supabase
+    .from('regulatory_entries')
+    .upsert(row, { onConflict: 'source_url' })
+    .select()
+    .single();
+
+  if (error) {
+    return res.status(500).json({ error: error.message });
+  }
+  res.status(201).json(data);
+});
+
 app.get('/entries', async (req, res) => {
   const { data, error } = await supabase
     .from('regulatory_entries')

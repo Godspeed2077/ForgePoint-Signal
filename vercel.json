@@ -1,6 +1,9 @@
 {
   "version": 2,
   "rewrites": [
-    { "source": "/(.*)", "destination": "/api" }
+    { "source": "/entries", "destination": "/api" },
+    { "source": "/entries/:path*", "destination": "/api" },
+    { "source": "/health", "destination": "/api" },
+    { "source": "/checkout", "destination": "/api" }
   ]
 }

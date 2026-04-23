@@ -30,6 +30,14 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok' });
 });
 
+app.get('/checkout', (req, res) => {
+  const url = process.env.STRIPE_CHECKOUT_URL;
+  if (!url) {
+    return res.status(503).json({ error: 'Checkout not configured' });
+  }
+  res.redirect(302, url);
+});
+
 function requireIngestKey(req, res, next) {
   const expected = process.env.INGEST_API_KEY;
   if (!expected) {

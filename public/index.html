@@ -1,0 +1,651 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ForgePoint Signal — Federal Estate & Gift Tax Intelligence</title>
+    <meta
+      name="description"
+      content="Daily regulatory updates from the Federal Register, summarized for estate attorneys and financial advisors."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Source+Serif+4:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg: #080c16;
+        --surface: #11182a;
+        --surface-2: #1a2340;
+        --border: #243049;
+        --border-strong: #324164;
+        --text: #e8ebf2;
+        --text-muted: #8893ae;
+        --text-dim: #5a6583;
+        --accent: #c9a961;
+        --accent-hover: #dcbc74;
+        --accent-dim: #8a7440;
+        --low-bg: rgba(46, 139, 94, 0.16);
+        --low-fg: #7ad4a8;
+        --low-border: rgba(46, 139, 94, 0.35);
+        --med-bg: rgba(188, 145, 42, 0.16);
+        --med-fg: #ecc56a;
+        --med-border: rgba(188, 145, 42, 0.4);
+        --high-bg: rgba(200, 64, 64, 0.16);
+        --high-fg: #ff8f8f;
+        --high-border: rgba(200, 64, 64, 0.4);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+      }
+      html {
+        scroll-behavior: smooth;
+      }
+      body {
+        font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI",
+          sans-serif;
+        background: var(--bg);
+        background-image: radial-gradient(
+            ellipse 1000px 500px at 50% -100px,
+            rgba(201, 169, 97, 0.06),
+            transparent 60%
+          ),
+          radial-gradient(
+            ellipse 600px 400px at 15% 40%,
+            rgba(70, 90, 140, 0.08),
+            transparent 60%
+          );
+        background-attachment: fixed;
+        color: var(--text);
+        line-height: 1.6;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        font-feature-settings: "ss01", "cv11";
+      }
+
+      a {
+        color: var(--accent);
+        text-decoration: none;
+      }
+      a:hover {
+        color: var(--accent-hover);
+      }
+
+      .container {
+        max-width: 880px;
+        margin: 0 auto;
+        padding: 0 24px;
+      }
+
+      header.site {
+        border-bottom: 1px solid var(--border);
+        padding: 20px 0;
+        backdrop-filter: blur(10px);
+        background: rgba(8, 12, 22, 0.7);
+        position: sticky;
+        top: 0;
+        z-index: 10;
+      }
+      header.site .container {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-family: "Source Serif 4", Georgia, serif;
+        font-size: 20px;
+        font-weight: 600;
+        letter-spacing: -0.01em;
+      }
+      .brand-mark {
+        width: 28px;
+        height: 28px;
+        border: 1.5px solid var(--accent);
+        border-radius: 4px;
+        display: grid;
+        place-items: center;
+        color: var(--accent);
+        font-family: "Source Serif 4", Georgia, serif;
+        font-weight: 700;
+        font-size: 14px;
+      }
+      header.site nav {
+        display: flex;
+        gap: 28px;
+        align-items: center;
+      }
+      header.site nav a {
+        color: var(--text-muted);
+        font-size: 14px;
+        font-weight: 500;
+      }
+      header.site nav a:hover {
+        color: var(--text);
+      }
+      header.site .cta-sm {
+        color: var(--bg);
+        background: var(--accent);
+        padding: 8px 14px;
+        border-radius: 4px;
+        font-size: 13px;
+        font-weight: 600;
+      }
+      header.site .cta-sm:hover {
+        background: var(--accent-hover);
+        color: var(--bg);
+      }
+
+      section.hero {
+        padding: 80px 0 56px;
+        border-bottom: 1px solid var(--border);
+      }
+      .eyebrow {
+        display: inline-block;
+        font-size: 12px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
+        color: var(--accent);
+        margin-bottom: 20px;
+      }
+      h1 {
+        font-family: "Source Serif 4", Georgia, serif;
+        font-weight: 600;
+        font-size: 48px;
+        line-height: 1.1;
+        letter-spacing: -0.02em;
+        margin: 0 0 20px;
+        max-width: 18ch;
+      }
+      .tagline {
+        font-size: 18px;
+        color: var(--text-muted);
+        max-width: 56ch;
+        margin: 0 0 32px;
+      }
+      .trust-row {
+        display: flex;
+        gap: 28px;
+        flex-wrap: wrap;
+        font-size: 13px;
+        color: var(--text-dim);
+      }
+      .trust-row span {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .trust-row span::before {
+        content: "";
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: var(--accent);
+        opacity: 0.7;
+      }
+
+      section.feed {
+        padding: 56px 0 80px;
+      }
+      .feed-header {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        margin-bottom: 28px;
+      }
+      .feed-header h2 {
+        font-family: "Source Serif 4", Georgia, serif;
+        font-size: 24px;
+        font-weight: 600;
+        letter-spacing: -0.01em;
+        margin: 0;
+      }
+      .feed-meta {
+        font-size: 13px;
+        color: var(--text-dim);
+      }
+
+      .entry {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 24px 28px;
+        margin-bottom: 16px;
+        transition: border-color 0.15s ease;
+      }
+      .entry:hover {
+        border-color: var(--border-strong);
+      }
+      .entry-meta {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 12px;
+        font-size: 13px;
+        color: var(--text-dim);
+      }
+      .entry-meta .sep {
+        color: var(--border-strong);
+      }
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        padding: 4px 10px;
+        border-radius: 3px;
+        border: 1px solid transparent;
+      }
+      .badge::before {
+        content: "";
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: currentColor;
+      }
+      .badge-low {
+        background: var(--low-bg);
+        color: var(--low-fg);
+        border-color: var(--low-border);
+      }
+      .badge-medium {
+        background: var(--med-bg);
+        color: var(--med-fg);
+        border-color: var(--med-border);
+      }
+      .badge-high {
+        background: var(--high-bg);
+        color: var(--high-fg);
+        border-color: var(--high-border);
+      }
+      .badge-none {
+        background: rgba(140, 150, 180, 0.1);
+        color: var(--text-dim);
+        border-color: var(--border);
+      }
+      .entry h3 {
+        font-family: "Source Serif 4", Georgia, serif;
+        font-weight: 600;
+        font-size: 20px;
+        line-height: 1.3;
+        letter-spacing: -0.005em;
+        margin: 0 0 10px;
+        color: var(--text);
+      }
+      .entry-summary {
+        color: var(--text-muted);
+        font-size: 15px;
+        margin: 0 0 14px;
+      }
+      .entry-footer {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 13px;
+      }
+      .entry-footer a {
+        color: var(--text-dim);
+        font-weight: 500;
+      }
+      .entry-footer a:hover {
+        color: var(--accent);
+      }
+      .entry-footer .arrow {
+        transition: transform 0.15s ease;
+        display: inline-block;
+        margin-left: 2px;
+      }
+      .entry-footer a:hover .arrow {
+        transform: translateX(2px);
+      }
+
+      .paywall {
+        position: relative;
+        margin-top: 8px;
+      }
+      .paywall-stack {
+        position: relative;
+      }
+      .entry.locked {
+        filter: blur(5px);
+        opacity: 0.55;
+        user-select: none;
+        pointer-events: none;
+      }
+      .entry.locked:nth-child(2) {
+        filter: blur(6px);
+        opacity: 0.4;
+      }
+      .entry.locked:nth-child(3) {
+        filter: blur(7px);
+        opacity: 0.25;
+      }
+      .paywall-overlay {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-start;
+        align-items: center;
+        padding-top: 40px;
+        background: linear-gradient(
+          to bottom,
+          rgba(8, 12, 22, 0) 0%,
+          rgba(8, 12, 22, 0.6) 20%,
+          rgba(8, 12, 22, 0.92) 50%,
+          var(--bg) 75%
+        );
+        pointer-events: none;
+      }
+      .paywall-card {
+        pointer-events: auto;
+        background: linear-gradient(180deg, #141c33 0%, #0e1526 100%);
+        border: 1px solid var(--border-strong);
+        border-radius: 10px;
+        padding: 36px 40px;
+        max-width: 520px;
+        width: calc(100% - 48px);
+        text-align: center;
+        box-shadow: 0 30px 80px -20px rgba(0, 0, 0, 0.6),
+          0 0 0 1px rgba(201, 169, 97, 0.08);
+        margin-top: 60px;
+      }
+      .paywall-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: rgba(201, 169, 97, 0.12);
+        border: 1px solid rgba(201, 169, 97, 0.3);
+        display: grid;
+        place-items: center;
+        margin: 0 auto 20px;
+        color: var(--accent);
+      }
+      .paywall-card h3 {
+        font-family: "Source Serif 4", Georgia, serif;
+        font-size: 24px;
+        font-weight: 600;
+        letter-spacing: -0.01em;
+        margin: 0 0 10px;
+      }
+      .paywall-card p {
+        color: var(--text-muted);
+        font-size: 15px;
+        margin: 0 0 24px;
+      }
+      .paywall-cta {
+        display: inline-block;
+        background: var(--accent);
+        color: var(--bg);
+        padding: 14px 28px;
+        border-radius: 5px;
+        font-weight: 600;
+        font-size: 15px;
+        letter-spacing: -0.005em;
+        transition: background 0.15s ease;
+      }
+      .paywall-cta:hover {
+        background: var(--accent-hover);
+        color: var(--bg);
+      }
+      .paywall-cta .price {
+        opacity: 0.75;
+        font-weight: 500;
+        margin-left: 6px;
+      }
+      .paywall-fine {
+        font-size: 12px;
+        color: var(--text-dim);
+        margin-top: 14px;
+      }
+
+      .loading,
+      .empty,
+      .error {
+        padding: 60px 24px;
+        text-align: center;
+        color: var(--text-muted);
+        font-size: 15px;
+        border: 1px dashed var(--border);
+        border-radius: 8px;
+      }
+      .error {
+        color: var(--high-fg);
+        border-color: var(--high-border);
+      }
+
+      footer.site {
+        border-top: 1px solid var(--border);
+        padding: 32px 0;
+        color: var(--text-dim);
+        font-size: 13px;
+      }
+      footer.site .container {
+        display: flex;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 12px;
+      }
+
+      @media (max-width: 640px) {
+        h1 {
+          font-size: 36px;
+        }
+        .tagline {
+          font-size: 16px;
+        }
+        section.hero {
+          padding: 56px 0 40px;
+        }
+        .entry {
+          padding: 20px;
+        }
+        .feed-header {
+          flex-direction: column;
+          align-items: flex-start;
+          gap: 4px;
+        }
+        header.site nav a:not(.cta-sm) {
+          display: none;
+        }
+        .paywall-card {
+          padding: 28px 24px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header class="site">
+      <div class="container">
+        <div class="brand">
+          <div class="brand-mark">F</div>
+          ForgePoint Signal
+        </div>
+        <nav>
+          <a href="#feed">Updates</a>
+          <a href="#pricing">Pricing</a>
+          <a href="/checkout" class="cta-sm">Subscribe</a>
+        </nav>
+      </div>
+    </header>
+
+    <main>
+      <section class="hero">
+        <div class="container">
+          <span class="eyebrow">Federal Regulatory Intelligence</span>
+          <h1>Estate and gift tax changes, the day they're published.</h1>
+          <p class="tagline">
+            Every rulemaking, notice, and proposed change from the Federal
+            Register — read, summarized, and classified for estate attorneys
+            and financial advisors. Daily.
+          </p>
+          <div class="trust-row">
+            <span>Sourced from federalregister.gov</span>
+            <span>Updated every 24 hours</span>
+            <span>Cancel anytime</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="feed" id="feed">
+        <div class="container">
+          <div class="feed-header">
+            <h2>Latest updates</h2>
+            <div class="feed-meta" id="feed-meta"></div>
+          </div>
+          <div id="entries"></div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site" id="pricing">
+      <div class="container">
+        <div>© 2026 ForgePoint Signal</div>
+        <div>Updates sourced from federalregister.gov · Not legal advice</div>
+      </div>
+    </footer>
+
+    <script>
+      const FREE_LIMIT = 5;
+      const TEASER_LIMIT = 3;
+      const CHECKOUT_URL = "/checkout";
+
+      const fmtDate = (iso) => {
+        if (!iso) return "";
+        const d = new Date(iso + "T00:00:00Z");
+        if (Number.isNaN(d.getTime())) return iso;
+        return d.toLocaleDateString("en-US", {
+          month: "short",
+          day: "numeric",
+          year: "numeric",
+          timeZone: "UTC",
+        });
+      };
+
+      const esc = (s) =>
+        String(s ?? "").replace(
+          /[&<>"']/g,
+          (c) =>
+            ({
+              "&": "&amp;",
+              "<": "&lt;",
+              ">": "&gt;",
+              '"': "&quot;",
+              "'": "&#39;",
+            })[c],
+        );
+
+      const badge = (level) => {
+        const l = (level || "").toLowerCase();
+        const label =
+          l === "low"
+            ? "Low impact"
+            : l === "medium"
+              ? "Medium impact"
+              : l === "high"
+                ? "High impact"
+                : "Unclassified";
+        const cls =
+          l === "low" || l === "medium" || l === "high"
+            ? `badge-${l}`
+            : "badge-none";
+        return `<span class="badge ${cls}">${label}</span>`;
+      };
+
+      const renderEntry = (e, locked = false) => {
+        const jurisdiction = e.jurisdiction || "US Federal";
+        const date = fmtDate(e.published_date);
+        const sourceLabel = e.source || "Federal Register";
+        return `
+        <article class="entry${locked ? " locked" : ""}">
+          <div class="entry-meta">
+            ${badge(e.impact_level)}
+            <span>${esc(jurisdiction)}</span>
+            <span class="sep">·</span>
+            <span>${esc(date)}</span>
+          </div>
+          <h3>${esc(e.title || "Untitled")}</h3>
+          <p class="entry-summary">${esc(e.summary || "Summary not yet available.")}</p>
+          <div class="entry-footer">
+            <a href="${esc(e.source_url || "#")}" target="_blank" rel="noopener noreferrer">
+              Read on ${esc(sourceLabel)} <span class="arrow">→</span>
+            </a>
+          </div>
+        </article>`;
+      };
+
+      const paywallOverlay = `
+      <div class="paywall-overlay">
+        <div class="paywall-card">
+          <div class="paywall-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="11" width="18" height="11" rx="2"/>
+              <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+            </svg>
+          </div>
+          <h3>Unlock the full archive</h3>
+          <p>Every regulatory update, searchable history, email alerts on high-impact changes, and exportable summaries.</p>
+          <a class="paywall-cta" href="${CHECKOUT_URL}">
+            Get Full Access <span class="price">· $199/month</span>
+          </a>
+          <div class="paywall-fine">Cancel anytime · Secure checkout by Stripe</div>
+        </div>
+      </div>`;
+
+      async function load() {
+        const root = document.getElementById("entries");
+        const meta = document.getElementById("feed-meta");
+        root.innerHTML = '<div class="loading">Loading latest updates…</div>';
+        try {
+          const res = await fetch("/entries", {
+            headers: { accept: "application/json" },
+          });
+          if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+          const data = await res.json();
+          const entries = Array.isArray(data) ? data : [];
+
+          if (entries.length === 0) {
+            root.innerHTML =
+              '<div class="empty">No updates available yet. Check back soon — the feed refreshes daily.</div>';
+            return;
+          }
+
+          const latest = entries[0]?.published_date;
+          if (latest) {
+            meta.textContent = `Most recent: ${fmtDate(latest)} · ${entries.length} total`;
+          }
+
+          const visible = entries.slice(0, FREE_LIMIT);
+          const locked = entries.slice(FREE_LIMIT, FREE_LIMIT + TEASER_LIMIT);
+
+          const visibleHtml = visible.map((e) => renderEntry(e, false)).join("");
+          const lockedHtml = locked.map((e) => renderEntry(e, true)).join("");
+
+          root.innerHTML =
+            visibleHtml +
+            (locked.length > 0
+              ? `<div class="paywall"><div class="paywall-stack">${lockedHtml}</div>${paywallOverlay}</div>`
+              : "");
+        } catch (err) {
+          root.innerHTML = `<div class="error">Couldn't load updates: ${esc(err.message)}. Please refresh.</div>`;
+        }
+      }
+
+      load();
+    </script>
+  </body>
+</html>

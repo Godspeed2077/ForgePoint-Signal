@@ -49,15 +49,32 @@ npm run dev
 # -> http://localhost:3000/health
 ```
 
+## Public dashboard
+
+`public/index.html` is a single-file dark-theme dashboard served at `/` on
+Vercel. It fetches `/entries`, renders the 5 most recent cards in full, and
+blurs the next 3 behind a paywall CTA that links to `/checkout`.
+
+To wire up billing:
+
+1. In the Stripe dashboard, create a **Payment Link** for a $199/month
+   subscription product.
+2. Copy the `https://buy.stripe.com/...` URL and set it as
+   `STRIPE_CHECKOUT_URL` in Vercel env vars. `/checkout` 302s to that URL.
+
 ## Deploy to Vercel
 
 1. Import the GitHub repo in the Vercel dashboard.
 2. In Project Settings → Environment Variables, add:
    - `SUPABASE_URL`
+   - `SUPABASE_ANON_KEY` (used by the dashboard for reads through `/entries`)
    - `SUPABASE_SERVICE_ROLE_KEY` (required for `POST /entries`)
    - `INGEST_API_KEY`
-3. Deploy. The `vercel.json` rewrite sends every path to `api/index.js`, which
-   exports the Express app.
+   - `STRIPE_CHECKOUT_URL`
+3. Deploy. `vercel.json` routes `/entries`, `/entries/:id`, `/health`, and
+   `/checkout` to `api/index.js` (the Express app); everything else falls
+   through to Vercel's static file server, which serves `public/index.html`
+   at `/`.
 
 ## Data ingestion
 

@@ -428,6 +428,44 @@
         border-color: var(--high-border);
       }
 
+      .banner {
+        position: sticky;
+        top: 0;
+        z-index: 20;
+        padding: 14px 24px;
+        text-align: center;
+        font-size: 14px;
+        font-weight: 500;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 12px;
+      }
+      .banner-success {
+        background: linear-gradient(90deg, #1e4d38, #2a6b4f);
+        color: #d8f1e4;
+        border-bottom: 1px solid rgba(122, 212, 168, 0.3);
+      }
+      .banner-canceled {
+        background: var(--surface-2);
+        color: var(--text-muted);
+        border-bottom: 1px solid var(--border);
+      }
+      .banner button {
+        background: none;
+        border: 1px solid currentColor;
+        color: inherit;
+        opacity: 0.7;
+        padding: 2px 10px;
+        border-radius: 3px;
+        font-size: 12px;
+        cursor: pointer;
+        font-family: inherit;
+      }
+      .banner button:hover {
+        opacity: 1;
+      }
+
       footer.site {
         border-top: 1px solid var(--border);
         padding: 32px 0;
@@ -469,6 +507,7 @@
     </style>
   </head>
   <body>
+    <div id="banner"></div>
     <header class="site">
       <div class="container">
         <div class="brand">
@@ -523,6 +562,23 @@
       const FREE_LIMIT = 5;
       const TEASER_LIMIT = 3;
       const CHECKOUT_URL = "/checkout";
+
+      (function showCheckoutBanner() {
+        const params = new URLSearchParams(window.location.search);
+        const status = params.get("checkout");
+        if (!status) return;
+        const banner = document.getElementById("banner");
+        const cls = status === "success" ? "banner-success" : "banner-canceled";
+        const msg =
+          status === "success"
+            ? "Subscription confirmed. Welcome — you'll receive a receipt by email shortly."
+            : "Checkout canceled. No charge was made.";
+        banner.innerHTML = `
+          <div class="banner ${cls}">
+            <span>${msg}</span>
+            <button type="button" onclick="this.parentElement.remove(); history.replaceState(null, '', '/');">Dismiss</button>
+          </div>`;
+      })();
 
       const fmtDate = (iso) => {
         if (!iso) return "";

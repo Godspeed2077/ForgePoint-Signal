@@ -1,8 +1,10 @@
 const express = require('express');
 const cors = require('cors');
 const { createClient } = require('@supabase/supabase-js');
+const Stripe = require('stripe');
 
 const app = express();
+app.set('trust proxy', true);
 
 app.use(cors());
 app.use(express.json());
@@ -24,18 +26,56 @@ if (!supabaseUrl || !supabaseKey) {
 
 const supabase = createClient(supabaseUrl || '', supabaseKey || '');
 
+const stripeSecret = process.env.STRIPE_SECRET_KEY;
+const stripePriceId = process.env.STRIPE_PRICE_ID;
+const stripe = stripeSecret ? new Stripe(stripeSecret) : null;
+
+if (!stripe || !stripePriceId) {
+  console.warn('Stripe not configured: set STRIPE_SECRET_KEY and STRIPE_PRICE_ID.');
+} else {
+  const mode = stripeSecret.startsWith('sk_live_') ? 'LIVE' : 'test';
+  console.log(`Stripe initialized in ${mode} mode (price=${stripePriceId})`);
+}
+
+function appBaseUrl(req) {
+  if (process.env.APP_URL) return process.env.APP_URL.replace(/\/+$/, '');
+  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
+  return `${req.protocol}://${req.get('host')}`;
+}
+
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 app.get('/health', (req, res) => {
   res.json({ status: 'ok' });
 });
 
-app.get('/checkout', (req, res) => {
-  const url = process.env.STRIPE_CHECKOUT_URL;
-  if (!url) {
-    return res.status(503).json({ error: 'Checkout not configured' });
+app.get('/checkout', async (req, res) => {
+  if (!stripe || !stripePriceId) {
+    return res.status(503).json({
+      error: 'Checkout not configured. Set STRIPE_SECRET_KEY and STRIPE_PRICE_ID.',
+    });
   }
-  res.redirect(302, url);
+
+  try {
+    const baseUrl = appBaseUrl(req);
+    const session = await stripe.checkout.sessions.create({
+      mode: 'subscription',
+      line_items: [{ price: stripePriceId, quantity: 1 }],
+      success_url: `${baseUrl}/?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${baseUrl}/?checkout=canceled`,
+      billing_address_collection: 'required',
+      allow_promotion_codes: true,
+      customer_creation: 'always',
+      subscription_data: {
+        metadata: { product: 'forgepoint-signal' },
+      },
+    });
+    console.log(`Stripe session created: ${session.id}`);
+    res.redirect(303, session.url);
+  } catch (err) {
+    console.error(`Stripe checkout error: ${err.message}`);
+    res.status(500).json({ error: 'Failed to create checkout session' });
+  }
 });
 
 function requireIngestKey(req, res, next) {

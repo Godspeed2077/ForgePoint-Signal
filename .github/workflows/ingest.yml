@@ -1,4 +1,4 @@
-name: Ingest Federal Register
+name: Ingest regulatory sources
 
 on:
   schedule:
@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
     inputs:
       lookback_days:
-        description: "How many days back to scan (overrides default of 30)"
+        description: "How many days back to scan Federal Register (default 30)"
         required: false
         default: "30"
 
@@ -26,9 +26,20 @@ jobs:
 
       - run: npm ci
 
-      - run: npm run ingest
+      - name: Federal Register
+        run: npm run ingest
         env:
           FORGEPOINT_API_URL: ${{ secrets.FORGEPOINT_API_URL }}
           INGEST_API_KEY: ${{ secrets.INGEST_API_KEY }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           LOOKBACK_DAYS: ${{ inputs.lookback_days || '' }}
+
+      # Run IRS ingest even if the Federal Register step failed, so a single
+      # source failure doesn't hide the other source's results.
+      - name: IRS Newsroom
+        if: always()
+        run: npm run ingest:irs
+        env:
+          FORGEPOINT_API_URL: ${{ secrets.FORGEPOINT_API_URL }}
+          INGEST_API_KEY: ${{ secrets.INGEST_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}

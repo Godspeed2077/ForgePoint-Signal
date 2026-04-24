@@ -9,6 +9,38 @@ REST API tracking federal estate tax and gift tax regulatory changes.
 - `GET /entries/:id` — one entry by UUID
 - `POST /entries` — insert or upsert an entry (keyed by `source_url`). Requires
   the `x-api-key` header to match `INGEST_API_KEY`. Used by the ingestion script.
+- `POST /mcp` — Model Context Protocol endpoint (Streamable HTTP transport,
+  stateless). See `## MCP server` below.
+
+## MCP server
+
+`POST /mcp` hosts a remote MCP server over HTTP with SSE-streamed responses
+(MCP Streamable HTTP transport, stateless mode — no session state, every
+request is independent). Tools:
+
+| Tool | Cost | Description |
+| --- | --- | --- |
+| `preview_regulations` | **Free** | 5 most recent entries (id, title, date, jurisdiction, category, impact_level, summary) |
+| `search_regulations` | **$0.10 USDC** | Filter by `query`, `jurisdiction`, `category`, `impact_level`, `limit` (max 50) |
+| `get_regulation_detail` | **$0.10 USDC** | Full row for a given `entry_id` |
+| `get_recent_by_impact` | **$0.10 USDC** | Most recent entries at a given `impact_level` (default `high`) |
+
+Paid tools are gated with **x402** on Base mainnet. Calling a paid tool without
+a valid `X-PAYMENT` header returns **HTTP 402** with the payment requirements:
+
+- `payTo`: `0xea8244C9374aD596b2Ac87c9A1c6844edA88521c`
+- `asset`: USDC on Base (`0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913`)
+- `maxAmountRequired`: `100000` (0.10 USDC, 6 decimals)
+- Facilitator: `https://facilitator.x402.org`
+
+Clients generate the payment payload (typically via an x402 client library
+like `x402-fetch` or `x402-axios`), resend the tool call with the encoded
+payload in `X-PAYMENT`, and the server verifies it with the facilitator
+before executing the tool. After success, the response includes an
+`X-PAYMENT-RESPONSE` header with the settlement receipt.
+
+CORS on `/mcp` is `Access-Control-Allow-Origin: *` so any MCP client can
+connect (the rest of the API is scoped to `https://forgepointsignal.com`).
 
 ## Stack
 

@@ -2,15 +2,24 @@ const express = require('express');
 const cors = require('cors');
 const { createClient } = require('@supabase/supabase-js');
 const Stripe = require('stripe');
+const { mountMcp } = require('./mcp.js');
 
 const app = express();
 app.set('trust proxy', true);
 
-app.use(
-  cors({
-    origin: 'https://forgepointsignal.com',
-  }),
-);
+const mcpCors = cors({
+  origin: '*',
+  methods: ['GET', 'POST', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Accept', 'Mcp-Session-Id', 'X-PAYMENT'],
+  exposedHeaders: ['Mcp-Session-Id', 'X-PAYMENT-RESPONSE'],
+});
+const siteCors = cors({ origin: 'https://forgepointsignal.com' });
+app.use((req, res, next) => {
+  if (req.path === '/mcp' || req.path.startsWith('/mcp/')) {
+    return mcpCors(req, res, next);
+  }
+  return siteCors(req, res, next);
+});
 app.use(express.json());
 
 const SUCCESS_URL = 'https://forgepointsignal.com/success';
@@ -51,6 +60,9 @@ if (!stripe || !stripePriceId) {
 }
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+mountMcp(app, supabase);
+console.log('MCP server mounted at /mcp');
 
 app.get('/health', (req, res) => {
   res.json({ status: 'ok' });

@@ -5,7 +5,8 @@
     { "source": "/entries", "destination": "/api" },
     { "source": "/entries/:path*", "destination": "/api" },
     { "source": "/health", "destination": "/api" },
-    { "source": "/checkout", "destination": "/api" }
+    { "source": "/checkout", "destination": "/api" },
+    { "source": "/mcp", "destination": "/api" }
   ],
   "headers": [
     {

@@ -6,6 +6,8 @@
     { "source": "/entries/:path*", "destination": "/api" },
     { "source": "/health", "destination": "/api" },
     { "source": "/checkout", "destination": "/api" },
+    { "source": "/webhook", "destination": "/api" },
+    { "source": "/auth/:path*", "destination": "/api" },
     { "source": "/mcp", "destination": "/api" }
   ],
   "headers": [

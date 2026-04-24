@@ -5,10 +5,23 @@ REST API tracking federal estate tax and gift tax regulatory changes.
 ## Endpoints
 
 - `GET /health` — liveness probe, returns `{ "status": "ok" }`
-- `GET /entries` — all entries, newest `published_date` first
+- `GET /entries` — gated on session cookie. Active subscribers get the full
+  feed; anonymous callers get at most 8 entries (5 visible + 3 teasers).
 - `GET /entries/:id` — one entry by UUID
 - `POST /entries` — insert or upsert an entry (keyed by `source_url`). Requires
   the `x-api-key` header to match `INGEST_API_KEY`. Used by the ingestion script.
+- `POST /webhook` — Stripe webhook. Signed with `STRIPE_WEBHOOK_SECRET`.
+  Handles `checkout.session.completed`, `customer.subscription.deleted`,
+  `invoice.payment_failed`. Upserts the `subscribers` table.
+- `POST /auth/send-link` — `{email}` → triggers a Supabase Auth magic link if
+  the email belongs to an active subscriber. Always returns 200 to avoid
+  leaking subscription membership.
+- `GET /auth/callback` — landing page for the Supabase magic link; hands the
+  access token to `/auth/verify` client-side.
+- `POST /auth/verify` — `{access_token}` → sets the `forgepoint_session`
+  cookie (HMAC-signed with `SESSION_SECRET`, 30-day TTL).
+- `GET /auth/me` — returns `{authenticated, email}` based on the cookie.
+- `POST /auth/logout` — clears the session cookie.
 - `POST /mcp` — Model Context Protocol endpoint (Streamable HTTP transport,
   stateless). See `## MCP server` below.
 
@@ -51,8 +64,14 @@ connect (the rest of the API is scoped to `https://forgepointsignal.com`).
 ## Supabase setup
 
 1. Create a project at <https://supabase.com/dashboard>.
-2. In the SQL editor, run [`supabase/migrations/0001_regulatory_entries.sql`](supabase/migrations/0001_regulatory_entries.sql).
-3. From Project Settings → API, copy the **Project URL** and **anon public key**.
+2. In the SQL editor, run the migrations in order:
+   - [`supabase/migrations/0001_regulatory_entries.sql`](supabase/migrations/0001_regulatory_entries.sql)
+   - [`supabase/migrations/0002_subscribers.sql`](supabase/migrations/0002_subscribers.sql)
+3. From Project Settings → API, copy the **Project URL**, **anon public key**, and **service role key**.
+4. **Auth**: go to Authentication → Providers → Email and make sure "Email
+   provider" is enabled with magic links on. Supabase will send the sign-in
+   emails (configure SMTP under Authentication → Emails if you want to send
+   from your own domain).
 
 ### Schema: `regulatory_entries`
 
@@ -87,28 +106,43 @@ npm run dev
 Vercel. It fetches `/entries`, renders the 5 most recent cards in full, and
 blurs the next 3 behind a paywall CTA that links to `/checkout`.
 
-## Stripe Checkout
+## Stripe Checkout and post-payment fulfillment
 
-`GET /checkout` creates a Stripe Checkout Session server-side
-(subscription mode, billing address required, promo codes allowed) and
-303s the user to Stripe's hosted checkout. `success_url` and `cancel_url`
-are hardcoded to `https://forgepointsignal.com/success` and
-`https://forgepointsignal.com`.
+`GET /checkout` creates a Stripe Checkout Session server-side (subscription
+mode, billing address required, promo codes allowed) and 303s the user to
+Stripe's hosted checkout. `success_url` and `cancel_url` are hardcoded to
+`https://forgepointsignal.com/success` and `https://forgepointsignal.com`.
 
 On any error, the response body includes the structured Stripe error
 (`type`, `code`, `param`, `message`, `doc_url`, `request_id`) so failures
 are diagnosable from the network tab without grepping logs.
 
+After a successful checkout, Stripe fires `checkout.session.completed` to
+`POST /webhook`, which upserts a row into the `subscribers` table with
+`status='active'` keyed on email. Later `customer.subscription.deleted` and
+`invoice.payment_failed` events flip `status` back to `inactive` by looking
+up the row by `stripe_customer_id`.
+
+Subscribers sign in on the dashboard with a magic link: they enter their
+email, Supabase Auth emails them a link, clicking it lands them on
+`/auth/callback` which exchanges the token for a server-side signed session
+cookie. The dashboard calls `/auth/me` on load and — if authenticated — the
+`/entries` endpoint returns the full feed instead of the 5+3 paywalled view.
+
 To wire up billing:
 
 1. In the Stripe dashboard, create a **Product** named "ForgePoint Signal"
    with a **recurring price** of $199/month (USD).
-2. Copy the **Price ID** (starts with `price_...`) and the **Secret key**
+2. Copy the **Price ID** (`price_...`) and the **Secret key**
    (`sk_test_...` while testing, `sk_live_...` for production). Both must
-   be in the same mode — a live secret with a test price (or vice versa)
-   returns `resource_missing`.
-3. Set `STRIPE_SECRET_KEY` and `STRIPE_PRICE_ID` in Vercel env vars and
-   redeploy.
+   be in the same mode.
+3. Create a webhook at Dashboard → Developers → Webhooks pointing at
+   `https://forgepointsignal.com/webhook`. Subscribe to:
+   `checkout.session.completed`, `customer.subscription.deleted`,
+   `invoice.payment_failed`. Copy the **Signing secret** (`whsec_...`).
+4. Set `STRIPE_SECRET_KEY`, `STRIPE_PRICE_ID`, `STRIPE_WEBHOOK_SECRET` in
+   Vercel env vars. Also set `SESSION_SECRET` (32+ random bytes — generate
+   with `openssl rand -base64 48`). Redeploy.
 
 ## Deploy to Vercel
 
@@ -116,14 +150,16 @@ To wire up billing:
 2. In Project Settings → Environment Variables, add:
    - `SUPABASE_URL`
    - `SUPABASE_ANON_KEY` (used by the dashboard for reads through `/entries`)
-   - `SUPABASE_SERVICE_ROLE_KEY` (required for `POST /entries`)
+   - `SUPABASE_SERVICE_ROLE_KEY` (required for `/webhook`, `/auth/*`, and `POST /entries`)
    - `INGEST_API_KEY`
    - `STRIPE_SECRET_KEY`
    - `STRIPE_PRICE_ID`
-3. Deploy. `vercel.json` routes `/entries`, `/entries/:id`, `/health`, and
-   `/checkout` to `api/index.js` (the Express app); everything else falls
-   through to Vercel's static file server, which serves `public/index.html`
-   at `/`.
+   - `STRIPE_WEBHOOK_SECRET`
+   - `SESSION_SECRET` (32+ random bytes)
+3. Deploy. `vercel.json` routes `/entries`, `/entries/:id`, `/health`,
+   `/checkout`, `/webhook`, `/auth/*`, and `/mcp` to `api/index.js` (the
+   Express app); everything else falls through to Vercel's static file
+   server, which serves `public/index.html` at `/`.
 
 ## Data ingestion
 

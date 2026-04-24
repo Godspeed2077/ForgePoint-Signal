@@ -428,6 +428,97 @@
         border-color: var(--high-border);
       }
 
+      .login-form {
+        margin-top: 20px;
+        padding-top: 18px;
+        border-top: 1px solid var(--border);
+        text-align: left;
+      }
+      .login-label {
+        display: block;
+        font-size: 12px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--text-dim);
+        margin: 0 0 10px;
+        text-align: center;
+      }
+      .login-row {
+        display: flex;
+        gap: 8px;
+      }
+      .login-row input[type="email"] {
+        flex: 1;
+        background: var(--bg);
+        border: 1px solid var(--border-strong);
+        color: var(--text);
+        font: inherit;
+        font-size: 14px;
+        padding: 10px 12px;
+        border-radius: 4px;
+        outline: none;
+      }
+      .login-row input[type="email"]:focus {
+        border-color: var(--accent);
+      }
+      .login-row button {
+        background: transparent;
+        border: 1px solid var(--border-strong);
+        color: var(--text-muted);
+        font: inherit;
+        font-size: 14px;
+        font-weight: 500;
+        padding: 10px 16px;
+        border-radius: 4px;
+        cursor: pointer;
+        white-space: nowrap;
+      }
+      .login-row button:hover {
+        color: var(--text);
+        border-color: var(--accent);
+      }
+      .login-row button:disabled {
+        opacity: 0.5;
+        cursor: default;
+      }
+      .login-msg {
+        font-size: 12px;
+        color: var(--text-dim);
+        margin-top: 10px;
+        text-align: center;
+      }
+      .login-msg.ok {
+        color: var(--low-fg);
+      }
+      .login-msg.err {
+        color: var(--high-fg);
+      }
+      .signed-in {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        font-size: 13px;
+        color: var(--text-muted);
+      }
+      .signed-in strong {
+        color: var(--text);
+        font-weight: 500;
+      }
+      .signed-in .logout {
+        background: none;
+        border: none;
+        color: var(--text-dim);
+        cursor: pointer;
+        font: inherit;
+        padding: 0;
+        text-decoration: underline;
+        text-underline-offset: 2px;
+      }
+      .signed-in .logout:hover {
+        color: var(--accent);
+      }
+
       footer.site {
         border-top: 1px solid var(--border);
         padding: 32px 0;
@@ -481,10 +572,10 @@
           <div class="brand-mark">F</div>
           ForgePoint Signal
         </div>
-        <nav>
+        <nav id="site-nav">
           <a href="#feed">Updates</a>
           <a href="#pricing">Pricing</a>
-          <a href="/checkout" class="cta-sm">Subscribe</a>
+          <a href="/checkout" class="cta-sm" id="nav-auth">Subscribe</a>
         </nav>
       </div>
     </header>
@@ -610,49 +701,143 @@
             Get Full Access <span class="price">· $199/month</span>
           </a>
           <div class="paywall-fine">Cancel anytime · Secure checkout by Stripe</div>
+          <form class="login-form" id="login-form" novalidate>
+            <label class="login-label" for="login-email">Already a subscriber?</label>
+            <div class="login-row">
+              <input type="email" id="login-email" name="email" required autocomplete="email" placeholder="you@firm.com" />
+              <button type="submit" id="login-submit">Email me a link</button>
+            </div>
+            <div class="login-msg" id="login-msg"></div>
+          </form>
         </div>
       </div>`;
+
+      function renderSignedInNav(email) {
+        const nav = document.getElementById("site-nav");
+        if (!nav) return;
+        nav.innerHTML = `
+          <a href="#feed">Updates</a>
+          <span class="signed-in">
+            <span>Signed in as <strong>${esc(email)}</strong></span>
+            <button type="button" class="logout" id="logout-btn">Sign out</button>
+          </span>`;
+        const btn = document.getElementById("logout-btn");
+        btn?.addEventListener("click", async () => {
+          await fetch("/auth/logout", { method: "POST", credentials: "same-origin" });
+          window.location.reload();
+        });
+      }
+
+      function attachLoginHandler() {
+        const form = document.getElementById("login-form");
+        if (!form) return;
+        form.addEventListener("submit", async (e) => {
+          e.preventDefault();
+          const emailInput = document.getElementById("login-email");
+          const msg = document.getElementById("login-msg");
+          const submit = document.getElementById("login-submit");
+          const email = emailInput.value.trim();
+          if (!email) return;
+          submit.disabled = true;
+          msg.className = "login-msg";
+          msg.textContent = "Sending…";
+          try {
+            const res = await fetch("/auth/send-link", {
+              method: "POST",
+              headers: { "content-type": "application/json" },
+              credentials: "same-origin",
+              body: JSON.stringify({ email }),
+            });
+            if (res.ok) {
+              msg.className = "login-msg ok";
+              msg.textContent =
+                "Check your inbox. If you have an active subscription, a sign-in link is on its way.";
+              emailInput.value = "";
+            } else {
+              const body = await res.json().catch(() => ({}));
+              msg.className = "login-msg err";
+              msg.textContent = body.error || `Request failed (${res.status}).`;
+            }
+          } catch (err) {
+            msg.className = "login-msg err";
+            msg.textContent = err.message || "Request failed.";
+          } finally {
+            submit.disabled = false;
+          }
+        });
+      }
+
+      async function fetchAuthState() {
+        try {
+          const res = await fetch("/auth/me", {
+            credentials: "same-origin",
+            headers: { accept: "application/json" },
+          });
+          if (!res.ok) return { authenticated: false };
+          return await res.json();
+        } catch {
+          return { authenticated: false };
+        }
+      }
 
       async function load() {
         const root = document.getElementById("entries");
         const meta = document.getElementById("feed-meta");
         root.innerHTML = '<div class="loading">Loading latest updates…</div>';
-        try {
-          const res = await fetch("/entries", {
+
+        const [auth, entriesRes] = await Promise.all([
+          fetchAuthState(),
+          fetch("/entries", {
+            credentials: "same-origin",
             headers: { accept: "application/json" },
-          });
-          if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
-          const data = await res.json();
-          const entries = Array.isArray(data) ? data : [];
+          }),
+        ]);
 
-          if (entries.length === 0) {
-            root.innerHTML =
-              '<div class="empty">No updates available yet. Check back soon — the feed refreshes daily.</div>';
-            return;
-          }
+        const isSubscriber = Boolean(auth?.authenticated);
+        if (isSubscriber) renderSignedInNav(auth.email);
 
-          const latest = entries[0]?.published_date;
-          if (latest) {
-            meta.textContent = `Most recent: ${fmtDate(latest)} · ${entries.length} total`;
-          }
-
-          const visible = entries.slice(0, FREE_LIMIT);
-          const locked = entries.slice(FREE_LIMIT, FREE_LIMIT + TEASER_LIMIT);
-
-          const visibleHtml = visible.map((e) => renderEntry(e, false)).join("");
-          const lockedHtml = locked.map((e) => renderEntry(e, true)).join("");
-
-          root.innerHTML =
-            visibleHtml +
-            (locked.length > 0
-              ? `<div class="paywall"><div class="paywall-stack">${lockedHtml}</div>${paywallOverlay}</div>`
-              : "");
-        } catch (err) {
-          root.innerHTML = `<div class="error">Couldn't load updates: ${esc(err.message)}. Please refresh.</div>`;
+        if (!entriesRes.ok) {
+          root.innerHTML = `<div class="error">Couldn't load updates: ${entriesRes.status} ${esc(entriesRes.statusText)}. Please refresh.</div>`;
+          return;
         }
+        const data = await entriesRes.json();
+        const entries = Array.isArray(data) ? data : [];
+
+        if (entries.length === 0) {
+          root.innerHTML =
+            '<div class="empty">No updates available yet. Check back soon — the feed refreshes daily.</div>';
+          return;
+        }
+
+        const latest = entries[0]?.published_date;
+        if (latest) {
+          meta.textContent = `Most recent: ${fmtDate(latest)} · ${entries.length} shown`;
+        }
+
+        if (isSubscriber) {
+          // Full list, no paywall.
+          root.innerHTML = entries.map((e) => renderEntry(e, false)).join("");
+          return;
+        }
+
+        const visible = entries.slice(0, FREE_LIMIT);
+        const locked = entries.slice(FREE_LIMIT, FREE_LIMIT + TEASER_LIMIT);
+        const visibleHtml = visible.map((e) => renderEntry(e, false)).join("");
+        const lockedHtml = locked.map((e) => renderEntry(e, true)).join("");
+
+        root.innerHTML =
+          visibleHtml +
+          (locked.length > 0
+            ? `<div class="paywall"><div class="paywall-stack">${lockedHtml}</div>${paywallOverlay}</div>`
+            : "");
+
+        attachLoginHandler();
       }
 
-      load();
+      load().catch((err) => {
+        const root = document.getElementById("entries");
+        if (root) root.innerHTML = `<div class="error">Unexpected error: ${esc(err.message)}</div>`;
+      });
     </script>
   </body>
 </html>

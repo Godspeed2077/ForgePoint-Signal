@@ -1,0 +1,37 @@
+# ForgePoint Signal
+
+ForgePoint Signal monitors US federal and state regulatory changes affecting estate, trust, gift, and inheritance tax law. Data is ingested daily from the Federal Register and IRS notices, parsed by AI into structured JSON, and served via MCP.
+
+## MCP Server
+Endpoint: https://forgepointsignal.com/mcp
+Transport: HTTP POST with SSE
+Protocol: MCP 2024-11-05
+
+## Tools
+
+### preview_regulations (FREE)
+Returns the 5 most recent regulatory entries. No payment required.
+
+### search_regulations (PAID - $0.10 USDC)
+Search the full database by keyword, jurisdiction, category, or impact level.
+Payment: x402, USDC on Base mainnet
+
+### get_regulation_detail (PAID - $0.10 USDC)
+Get complete detail for a specific entry by ID.
+Payment: x402, USDC on Base mainnet
+
+### get_recent_by_impact (PAID - $0.10 USDC)
+Get recent entries filtered by impact level (high/medium/low).
+Payment: x402, USDC on Base mainnet
+
+## Data Sources
+- Federal Register (federalregister.gov)
+- IRS Newsroom (irs.gov/newsroom)
+
+## Update Frequency
+Daily via automated cron job
+
+## Use Cases
+- Daily regulatory briefings for estate attorneys
+- Monitoring material tax law changes
+- AI agent research on US inheritance and gift tax updates

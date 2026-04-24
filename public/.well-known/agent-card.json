@@ -1,0 +1,37 @@
+{
+  "name": "ForgePoint Signal",
+  "description": "Daily regulatory monitoring for US estate, trust, and tax law changes. MCP-native with x402 micropayment support. Updated daily from Federal Register and IRS.",
+  "url": "https://forgepointsignal.com",
+  "mcp_endpoint": "https://forgepointsignal.com/mcp",
+  "tools": [
+    {
+      "name": "preview_regulations",
+      "description": "Free preview of 5 most recent regulatory changes",
+      "paid": false
+    },
+    {
+      "name": "search_regulations",
+      "description": "Search full regulatory database",
+      "paid": true,
+      "price": "$0.10 USDC"
+    },
+    {
+      "name": "get_regulation_detail",
+      "description": "Full detail for a specific regulation entry",
+      "paid": true,
+      "price": "$0.10 USDC"
+    },
+    {
+      "name": "get_recent_by_impact",
+      "description": "Recent entries filtered by impact level",
+      "paid": true,
+      "price": "$0.10 USDC"
+    }
+  ],
+  "payment_protocol": "x402",
+  "payment_network": "base-mainnet",
+  "payment_currency": "USDC",
+  "price_per_call": "$0.10",
+  "data_freshness": "24h",
+  "categories": ["legal", "regulatory", "finance", "estate-planning", "tax"]
+}

@@ -1,0 +1,12 @@
+User-agent: *
+Allow: /
+Allow: /privacy
+Allow: /terms
+Disallow: /checkout
+Disallow: /success
+Disallow: /entries
+Disallow: /entries/
+Disallow: /health
+Disallow: /api/
+
+Sitemap: https://forgepointsignal.com/sitemap.xml

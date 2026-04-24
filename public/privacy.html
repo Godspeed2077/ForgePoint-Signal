@@ -1,0 +1,314 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Privacy Policy — ForgePoint Signal</title>
+    <meta
+      name="description"
+      content="How ForgePoint Signal collects, uses, and protects your data."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Source+Serif+4:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg: #080c16;
+        --surface: #11182a;
+        --border: #243049;
+        --border-strong: #324164;
+        --text: #e8ebf2;
+        --text-muted: #8893ae;
+        --text-dim: #5a6583;
+        --accent: #c9a961;
+        --accent-hover: #dcbc74;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI",
+          sans-serif;
+        background: var(--bg);
+        background-image: radial-gradient(
+          ellipse 1000px 500px at 50% -100px,
+          rgba(201, 169, 97, 0.05),
+          transparent 60%
+        );
+        background-attachment: fixed;
+        color: var(--text);
+        line-height: 1.7;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+      }
+      a {
+        color: var(--accent);
+        text-decoration: none;
+      }
+      a:hover {
+        color: var(--accent-hover);
+        text-decoration: underline;
+      }
+
+      header.site {
+        border-bottom: 1px solid var(--border);
+        padding: 20px 0;
+      }
+      header.site .container,
+      footer.site .container,
+      main .container {
+        max-width: 760px;
+        margin: 0 auto;
+        padding: 0 24px;
+      }
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-family: "Source Serif 4", Georgia, serif;
+        font-size: 20px;
+        font-weight: 600;
+        letter-spacing: -0.01em;
+        color: var(--text);
+      }
+      .brand:hover {
+        text-decoration: none;
+      }
+      .brand-mark {
+        width: 28px;
+        height: 28px;
+        border: 1.5px solid var(--accent);
+        border-radius: 4px;
+        display: grid;
+        place-items: center;
+        color: var(--accent);
+        font-family: "Source Serif 4", Georgia, serif;
+        font-weight: 700;
+        font-size: 14px;
+      }
+
+      main {
+        padding: 64px 0 96px;
+      }
+      .eyebrow {
+        font-size: 12px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
+        color: var(--accent);
+        margin-bottom: 16px;
+      }
+      h1 {
+        font-family: "Source Serif 4", Georgia, serif;
+        font-weight: 600;
+        font-size: 40px;
+        line-height: 1.15;
+        letter-spacing: -0.02em;
+        margin: 0 0 12px;
+      }
+      .updated {
+        color: var(--text-dim);
+        font-size: 14px;
+        margin: 0 0 40px;
+      }
+      h2 {
+        font-family: "Source Serif 4", Georgia, serif;
+        font-weight: 600;
+        font-size: 22px;
+        line-height: 1.3;
+        letter-spacing: -0.01em;
+        margin: 40px 0 14px;
+        color: var(--text);
+      }
+      p,
+      li {
+        color: var(--text-muted);
+        font-size: 15.5px;
+      }
+      p {
+        margin: 0 0 16px;
+      }
+      ul {
+        margin: 0 0 16px;
+        padding-left: 22px;
+      }
+      li {
+        margin-bottom: 8px;
+      }
+      strong {
+        color: var(--text);
+        font-weight: 600;
+      }
+
+      footer.site {
+        border-top: 1px solid var(--border);
+        padding: 28px 0;
+        color: var(--text-dim);
+        font-size: 13px;
+      }
+      footer.site .container {
+        display: flex;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 12px;
+      }
+      footer.site a {
+        color: var(--text-dim);
+      }
+      footer.site a:hover {
+        color: var(--accent);
+        text-decoration: none;
+      }
+
+      @media (max-width: 640px) {
+        h1 {
+          font-size: 32px;
+        }
+        main {
+          padding: 44px 0 64px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header class="site">
+      <div class="container">
+        <a href="/" class="brand">
+          <div class="brand-mark">F</div>
+          ForgePoint Signal
+        </a>
+      </div>
+    </header>
+
+    <main>
+      <div class="container">
+        <div class="eyebrow">Legal</div>
+        <h1>Privacy Policy</h1>
+        <p class="updated">Last updated: April 24, 2026</p>
+
+        <p>
+          ForgePoint Signal ("we", "us") operates
+          <a href="https://forgepointsignal.com">forgepointsignal.com</a>, a
+          subscription service that summarizes publicly available federal
+          estate and gift tax regulatory documents. This policy explains what
+          we collect, why, and how it is handled.
+        </p>
+
+        <h2>What we collect</h2>
+        <ul>
+          <li>
+            <strong>Billing information.</strong> When you subscribe, Stripe
+            collects your name, email, billing address, and payment method on
+            our behalf. We do not see or store your card number, CVC, or full
+            card details.
+          </li>
+          <li>
+            <strong>Subscription status.</strong> We store your email and
+            subscription state (active, canceled, past due) in our database
+            so we can grant and revoke access.
+          </li>
+          <li>
+            <strong>Server logs.</strong> Like any web service, our host
+            (Vercel) records request metadata — IP address, user agent,
+            timestamps, response codes — for a limited period for security,
+            debugging, and abuse prevention.
+          </li>
+        </ul>
+        <p>
+          We do not use advertising trackers and we do not sell your
+          information to third parties.
+        </p>
+
+        <h2>How we use it</h2>
+        <ul>
+          <li>To process your subscription payment through Stripe.</li>
+          <li>To deliver the regulatory intelligence service you subscribed to.</li>
+          <li>To send account and billing-related email (receipts, renewal reminders, service notices).</li>
+          <li>To respond to support requests.</li>
+          <li>To monitor for abuse and maintain service security.</li>
+        </ul>
+
+        <h2>Third-party services</h2>
+        <ul>
+          <li>
+            <strong>Stripe, Inc.</strong> — handles all payment processing.
+            Stripe is PCI-DSS Level 1 certified. See the
+            <a href="https://stripe.com/privacy" target="_blank" rel="noopener noreferrer">Stripe Privacy Policy</a>.
+          </li>
+          <li>
+            <strong>Supabase, Inc.</strong> — hosts our database of regulatory
+            entries and subscription state.
+          </li>
+          <li>
+            <strong>Vercel, Inc.</strong> — hosts the web application and
+            serves requests.
+          </li>
+          <li>
+            <strong>Anthropic, PBC.</strong> — processes the public text of
+            regulatory documents to generate plain-English summaries. No
+            subscriber personal information is sent to Anthropic.
+          </li>
+        </ul>
+
+        <h2>Cookies</h2>
+        <p>
+          The public dashboard itself sets no cookies. Stripe Checkout and
+          any authenticated account pages may set strictly necessary cookies
+          required for payment and session management.
+        </p>
+
+        <h2>Data retention</h2>
+        <p>
+          We retain billing records for as long as required by tax and
+          accounting law. Subscription records are retained for the life of
+          your account plus any legally required retention period after
+          closure.
+        </p>
+
+        <h2>Your rights</h2>
+        <p>
+          Depending on where you live, you may have the right to access,
+          correct, export, or delete personal information we hold about you,
+          and to object to or restrict certain processing. To exercise these
+          rights, email
+          <a href="mailto:privacy@forgepointsignal.com">privacy@forgepointsignal.com</a>.
+          We will respond within a reasonable timeframe and in accordance with
+          applicable law.
+        </p>
+
+        <h2>Changes to this policy</h2>
+        <p>
+          If we make material changes, we will update the "Last updated" date
+          above and, where appropriate, notify active subscribers by email.
+        </p>
+
+        <h2>Contact</h2>
+        <p>
+          Privacy questions:
+          <a href="mailto:privacy@forgepointsignal.com">privacy@forgepointsignal.com</a><br />
+          Security reports:
+          <a href="mailto:security@forgepointsignal.com">security@forgepointsignal.com</a>
+          (see also
+          <a href="/.well-known/security.txt">/.well-known/security.txt</a>).
+        </p>
+      </div>
+    </main>
+
+    <footer class="site">
+      <div class="container">
+        <div>© 2026 ForgePoint Signal · Not legal advice</div>
+        <div>
+          <a href="/privacy">Privacy</a> · <a href="/terms">Terms</a>
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

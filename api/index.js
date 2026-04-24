@@ -6,7 +6,11 @@ const Stripe = require('stripe');
 const app = express();
 app.set('trust proxy', true);
 
-app.use(cors());
+app.use(
+  cors({
+    origin: 'https://forgepointsignal.com',
+  }),
+);
 app.use(express.json());
 
 const SUCCESS_URL = 'https://forgepointsignal.com/success';

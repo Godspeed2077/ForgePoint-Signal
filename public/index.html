@@ -440,6 +440,12 @@
         flex-wrap: wrap;
         gap: 12px;
       }
+      footer.site a {
+        color: var(--text-dim);
+      }
+      footer.site a:hover {
+        color: var(--accent);
+      }
 
       @media (max-width: 640px) {
         h1 {
@@ -514,7 +520,7 @@
 
     <footer class="site" id="pricing">
       <div class="container">
-        <div>© 2026 ForgePoint Signal</div>
+        <div>© 2026 ForgePoint Signal · <a href="/privacy">Privacy</a> · <a href="/terms">Terms</a></div>
         <div>Updates sourced from federalregister.gov · Not legal advice</div>
       </div>
     </footer>

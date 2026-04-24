@@ -26,7 +26,7 @@ function buildServer(supabase) {
 
   server.tool(
     'preview_regulations',
-    "Get a free preview of the 5 most recent US regulatory changes monitored by ForgePoint Signal. Covers estate, trust, gift, and inheritance tax law. Updated daily from Federal Register and IRS.",
+    "Get a free preview of the 5 most recent US regulatory changes monitored by ForgePoint Signal. Covers estate, trust, gift, and inheritance tax law. Updated daily from the Federal Register and IRS Newsroom.",
     {},
     async () => {
       const { data, error } = await supabase

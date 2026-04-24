@@ -1,0 +1,285 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Subscription confirmed — ForgePoint Signal</title>
+    <meta name="robots" content="noindex" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Source+Serif+4:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg: #080c16;
+        --surface: #11182a;
+        --border: #243049;
+        --border-strong: #324164;
+        --text: #e8ebf2;
+        --text-muted: #8893ae;
+        --text-dim: #5a6583;
+        --accent: #c9a961;
+        --accent-hover: #dcbc74;
+        --check-bg: rgba(46, 139, 94, 0.16);
+        --check-fg: #7ad4a8;
+        --check-border: rgba(46, 139, 94, 0.4);
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI",
+          sans-serif;
+        background: var(--bg);
+        background-image: radial-gradient(
+            ellipse 1000px 500px at 50% -100px,
+            rgba(201, 169, 97, 0.06),
+            transparent 60%
+          ),
+          radial-gradient(
+            ellipse 600px 400px at 50% 80%,
+            rgba(122, 212, 168, 0.05),
+            transparent 60%
+          );
+        background-attachment: fixed;
+        color: var(--text);
+        line-height: 1.6;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+      }
+      a {
+        color: var(--accent);
+        text-decoration: none;
+      }
+      a:hover {
+        color: var(--accent-hover);
+      }
+
+      header.site {
+        border-bottom: 1px solid var(--border);
+        padding: 20px 0;
+      }
+      header.site .container {
+        max-width: 880px;
+        margin: 0 auto;
+        padding: 0 24px;
+      }
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-family: "Source Serif 4", Georgia, serif;
+        font-size: 20px;
+        font-weight: 600;
+        letter-spacing: -0.01em;
+      }
+      .brand-mark {
+        width: 28px;
+        height: 28px;
+        border: 1.5px solid var(--accent);
+        border-radius: 4px;
+        display: grid;
+        place-items: center;
+        color: var(--accent);
+        font-family: "Source Serif 4", Georgia, serif;
+        font-weight: 700;
+        font-size: 14px;
+      }
+
+      main {
+        flex: 1;
+        display: grid;
+        place-items: center;
+        padding: 48px 24px;
+      }
+      .card {
+        background: linear-gradient(180deg, #141c33 0%, #0e1526 100%);
+        border: 1px solid var(--border-strong);
+        border-radius: 10px;
+        padding: 48px 44px;
+        max-width: 520px;
+        width: 100%;
+        text-align: center;
+        box-shadow: 0 30px 80px -20px rgba(0, 0, 0, 0.6),
+          0 0 0 1px rgba(201, 169, 97, 0.06);
+      }
+      .check {
+        width: 56px;
+        height: 56px;
+        border-radius: 50%;
+        background: var(--check-bg);
+        border: 1px solid var(--check-border);
+        color: var(--check-fg);
+        display: grid;
+        place-items: center;
+        margin: 0 auto 24px;
+      }
+      h1 {
+        font-family: "Source Serif 4", Georgia, serif;
+        font-weight: 600;
+        font-size: 30px;
+        line-height: 1.2;
+        letter-spacing: -0.015em;
+        margin: 0 0 12px;
+      }
+      .lede {
+        color: var(--text-muted);
+        font-size: 16px;
+        margin: 0 0 32px;
+      }
+      .next-steps {
+        text-align: left;
+        background: rgba(8, 12, 22, 0.5);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 18px 20px;
+        margin: 0 0 28px;
+      }
+      .next-steps h2 {
+        font-size: 12px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        color: var(--accent);
+        margin: 0 0 10px;
+      }
+      .next-steps ul {
+        margin: 0;
+        padding-left: 18px;
+        color: var(--text-muted);
+        font-size: 14px;
+      }
+      .next-steps li {
+        margin-bottom: 6px;
+      }
+      .next-steps li:last-child {
+        margin-bottom: 0;
+      }
+      .actions {
+        display: flex;
+        gap: 12px;
+        justify-content: center;
+        flex-wrap: wrap;
+      }
+      .btn {
+        display: inline-block;
+        padding: 12px 22px;
+        border-radius: 5px;
+        font-weight: 600;
+        font-size: 14px;
+        letter-spacing: -0.005em;
+        transition: background 0.15s ease, color 0.15s ease;
+      }
+      .btn-primary {
+        background: var(--accent);
+        color: var(--bg);
+      }
+      .btn-primary:hover {
+        background: var(--accent-hover);
+        color: var(--bg);
+      }
+      .btn-secondary {
+        background: transparent;
+        border: 1px solid var(--border-strong);
+        color: var(--text-muted);
+      }
+      .btn-secondary:hover {
+        color: var(--text);
+        border-color: var(--accent);
+      }
+      .receipt {
+        font-size: 12px;
+        color: var(--text-dim);
+        margin-top: 22px;
+        word-break: break-all;
+      }
+
+      footer.site {
+        border-top: 1px solid var(--border);
+        padding: 24px 0;
+        color: var(--text-dim);
+        font-size: 13px;
+        text-align: center;
+      }
+      footer.site .container {
+        max-width: 880px;
+        margin: 0 auto;
+        padding: 0 24px;
+      }
+
+      @media (max-width: 540px) {
+        .card {
+          padding: 36px 24px;
+        }
+        h1 {
+          font-size: 26px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header class="site">
+      <div class="container">
+        <a href="/" class="brand" style="color: inherit">
+          <div class="brand-mark">F</div>
+          ForgePoint Signal
+        </a>
+      </div>
+    </header>
+
+    <main>
+      <div class="card">
+        <div class="check" aria-hidden="true">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="20 6 9 17 4 12"/>
+          </svg>
+        </div>
+        <h1>Subscription confirmed</h1>
+        <p class="lede">
+          Welcome to ForgePoint Signal. You'll start receiving the full
+          regulatory archive immediately.
+        </p>
+
+        <div class="next-steps">
+          <h2>What happens next</h2>
+          <ul>
+            <li>A receipt is on its way to your inbox from Stripe.</li>
+            <li>Manage your subscription anytime through the link in that email.</li>
+            <li>The full archive is now available on your dashboard.</li>
+          </ul>
+        </div>
+
+        <div class="actions">
+          <a href="/" class="btn btn-primary">Open dashboard</a>
+          <a href="mailto:support@forgepointsignal.com" class="btn btn-secondary">Contact support</a>
+        </div>
+
+        <div class="receipt" id="receipt"></div>
+      </div>
+    </main>
+
+    <footer class="site">
+      <div class="container">© 2026 ForgePoint Signal · Not legal advice</div>
+    </footer>
+
+    <script>
+      const sessionId = new URLSearchParams(window.location.search).get(
+        "session_id",
+      );
+      if (sessionId) {
+        document.getElementById("receipt").textContent =
+          `Reference: ${sessionId}`;
+      }
+    </script>
+  </body>
+</html>

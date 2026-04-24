@@ -1,12 +1,16 @@
 const express = require('express');
 const cors = require('cors');
 const { createClient } = require('@supabase/supabase-js');
+const Stripe = require('stripe');
 
 const app = express();
 app.set('trust proxy', true);
 
 app.use(cors());
 app.use(express.json());
+
+const SUCCESS_URL = 'https://forgepointsignal.com/success';
+const CANCEL_URL = 'https://forgepointsignal.com';
 
 const supabaseUrl = process.env.SUPABASE_URL;
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -25,16 +29,80 @@ if (!supabaseUrl || !supabaseKey) {
 
 const supabase = createClient(supabaseUrl || '', supabaseKey || '');
 
+const stripeSecret = process.env.STRIPE_SECRET_KEY;
+const stripePriceId = process.env.STRIPE_PRICE_ID;
+const stripe = stripeSecret ? new Stripe(stripeSecret) : null;
+
+if (!stripe || !stripePriceId) {
+  console.warn(
+    `Stripe not configured: STRIPE_SECRET_KEY=${stripeSecret ? 'set' : 'missing'} STRIPE_PRICE_ID=${stripePriceId ? 'set' : 'missing'}`,
+  );
+} else {
+  const mode = stripeSecret.startsWith('sk_live_')
+    ? 'LIVE'
+    : stripeSecret.startsWith('sk_test_')
+      ? 'test'
+      : 'unknown';
+  console.log(`Stripe initialized (key_mode=${mode}, price_id=${stripePriceId})`);
+}
+
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 app.get('/health', (req, res) => {
   res.json({ status: 'ok' });
 });
 
-app.get('/config', (req, res) => {
-  res.json({
-    stripe_checkout_url: process.env.STRIPE_CHECKOUT_URL || null,
-  });
+app.get('/checkout', async (req, res) => {
+  if (!stripe || !stripePriceId) {
+    console.error('Checkout request received but Stripe is not configured.');
+    return res.status(503).json({
+      error: 'Checkout not configured',
+      detail: 'Set STRIPE_SECRET_KEY and STRIPE_PRICE_ID env vars and redeploy.',
+    });
+  }
+
+  const keyMode = stripeSecret.startsWith('sk_live_') ? 'live' : 'test';
+  console.log(
+    `POST stripe.checkout.sessions.create mode=subscription price=${stripePriceId} key_mode=${keyMode}`,
+  );
+
+  try {
+    const session = await stripe.checkout.sessions.create({
+      mode: 'subscription',
+      line_items: [{ price: stripePriceId, quantity: 1 }],
+      success_url: `${SUCCESS_URL}?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: CANCEL_URL,
+      billing_address_collection: 'required',
+      allow_promotion_codes: true,
+      subscription_data: {
+        metadata: { product: 'forgepoint-signal' },
+      },
+    });
+    console.log(`Stripe session created: id=${session.id} url=${session.url}`);
+    res.redirect(303, session.url);
+  } catch (err) {
+    console.error('Stripe session create failed:', {
+      type: err.type,
+      code: err.code,
+      param: err.param,
+      statusCode: err.statusCode,
+      requestId: err.requestId,
+      doc_url: err.doc_url,
+      message: err.message,
+      raw: err.raw,
+    });
+    res.status(err.statusCode || 500).json({
+      error: 'Failed to create checkout session',
+      stripe: {
+        type: err.type || null,
+        code: err.code || null,
+        param: err.param || null,
+        message: err.message || null,
+        doc_url: err.doc_url || null,
+        request_id: err.requestId || null,
+      },
+    });
+  }
 });
 
 function requireIngestKey(req, res, next) {

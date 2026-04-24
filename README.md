@@ -57,22 +57,26 @@ blurs the next 3 behind a paywall CTA that links to `/checkout`.
 
 ## Stripe Checkout
 
-The Subscribe and Get Full Access buttons both link directly to a
-**Stripe Payment Link** URL. The URL lives in the `STRIPE_CHECKOUT_URL`
-env var; the dashboard fetches it from `GET /config` on load and assigns
-it to every element with `data-checkout` (the header CTA and the paywall
-card CTA). If the env var is unset, the buttons fall back to scrolling
-to the footer.
+`GET /checkout` creates a Stripe Checkout Session server-side
+(subscription mode, billing address required, promo codes allowed) and
+303s the user to Stripe's hosted checkout. `success_url` and `cancel_url`
+are hardcoded to `https://forgepointsignal.com/success` and
+`https://forgepointsignal.com`.
+
+On any error, the response body includes the structured Stripe error
+(`type`, `code`, `param`, `message`, `doc_url`, `request_id`) so failures
+are diagnosable from the network tab without grepping logs.
 
 To wire up billing:
 
-1. In the Stripe dashboard, create a **Payment Link** for a $199/month
-   recurring subscription product.
-2. Copy the `https://buy.stripe.com/...` URL and set it as
-   `STRIPE_CHECKOUT_URL` in Vercel env vars.
-3. Optional: in the Payment Link's "After payment" settings, set the
-   confirmation URL to `https://your-domain/?checkout=success` so the
-   dashboard shows a confirmation banner when users return.
+1. In the Stripe dashboard, create a **Product** named "ForgePoint Signal"
+   with a **recurring price** of $199/month (USD).
+2. Copy the **Price ID** (starts with `price_...`) and the **Secret key**
+   (`sk_test_...` while testing, `sk_live_...` for production). Both must
+   be in the same mode — a live secret with a test price (or vice versa)
+   returns `resource_missing`.
+3. Set `STRIPE_SECRET_KEY` and `STRIPE_PRICE_ID` in Vercel env vars and
+   redeploy.
 
 ## Deploy to Vercel
 
@@ -82,9 +86,10 @@ To wire up billing:
    - `SUPABASE_ANON_KEY` (used by the dashboard for reads through `/entries`)
    - `SUPABASE_SERVICE_ROLE_KEY` (required for `POST /entries`)
    - `INGEST_API_KEY`
-   - `STRIPE_CHECKOUT_URL`
+   - `STRIPE_SECRET_KEY`
+   - `STRIPE_PRICE_ID`
 3. Deploy. `vercel.json` routes `/entries`, `/entries/:id`, `/health`, and
-   `/config` to `api/index.js` (the Express app); everything else falls
+   `/checkout` to `api/index.js` (the Express app); everything else falls
    through to Vercel's static file server, which serves `public/index.html`
    at `/`.
 

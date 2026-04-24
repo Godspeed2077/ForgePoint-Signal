@@ -57,25 +57,22 @@ blurs the next 3 behind a paywall CTA that links to `/checkout`.
 
 ## Stripe Checkout
 
-`GET /checkout` creates a Stripe Checkout Session server-side (subscription
-mode, billing address required, promo codes allowed) and 303s the user to
-Stripe's hosted checkout. On completion Stripe redirects back to
-`/?checkout=success` or `/?checkout=canceled`; the dashboard shows a banner
-in either case.
+The Subscribe and Get Full Access buttons both link directly to a
+**Stripe Payment Link** URL. The URL lives in the `STRIPE_CHECKOUT_URL`
+env var; the dashboard fetches it from `GET /config` on load and assigns
+it to every element with `data-checkout` (the header CTA and the paywall
+card CTA). If the env var is unset, the buttons fall back to scrolling
+to the footer.
 
 To wire up billing:
 
-1. In the Stripe dashboard, create a **Product** named "ForgePoint Signal"
-   with a **recurring price** of $199/month (USD).
-2. Copy the **Price ID** (starts with `price_...`) and the **Secret key**
-   (starts with `sk_test_...` or `sk_live_...`) from Stripe.
-3. Set `STRIPE_SECRET_KEY` and `STRIPE_PRICE_ID` in Vercel env vars.
-4. Optional: set `APP_URL` to your production URL so success/cancel redirects
-   go to the apex domain instead of the Vercel preview URL.
-
-Webhooks (for provisioning access, handling `invoice.payment_failed`, etc.)
-are not wired up yet — add a `POST /webhook` handler with
-`stripe.webhooks.constructEvent` if you need them.
+1. In the Stripe dashboard, create a **Payment Link** for a $199/month
+   recurring subscription product.
+2. Copy the `https://buy.stripe.com/...` URL and set it as
+   `STRIPE_CHECKOUT_URL` in Vercel env vars.
+3. Optional: in the Payment Link's "After payment" settings, set the
+   confirmation URL to `https://your-domain/?checkout=success` so the
+   dashboard shows a confirmation banner when users return.
 
 ## Deploy to Vercel
 
@@ -85,11 +82,9 @@ are not wired up yet — add a `POST /webhook` handler with
    - `SUPABASE_ANON_KEY` (used by the dashboard for reads through `/entries`)
    - `SUPABASE_SERVICE_ROLE_KEY` (required for `POST /entries`)
    - `INGEST_API_KEY`
-   - `STRIPE_SECRET_KEY`
-   - `STRIPE_PRICE_ID`
-   - `APP_URL` (optional — your apex domain, e.g. `https://forgepoint.com`)
+   - `STRIPE_CHECKOUT_URL`
 3. Deploy. `vercel.json` routes `/entries`, `/entries/:id`, `/health`, and
-   `/checkout` to `api/index.js` (the Express app); everything else falls
+   `/config` to `api/index.js` (the Express app); everything else falls
    through to Vercel's static file server, which serves `public/index.html`
    at `/`.
 

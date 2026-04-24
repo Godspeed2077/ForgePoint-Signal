@@ -517,7 +517,7 @@
         <nav>
           <a href="#feed">Updates</a>
           <a href="#pricing">Pricing</a>
-          <a href="/checkout" class="cta-sm">Subscribe</a>
+          <a href="#pricing" class="cta-sm" data-checkout>Subscribe</a>
         </nav>
       </div>
     </header>
@@ -561,7 +561,23 @@
     <script>
       const FREE_LIMIT = 5;
       const TEASER_LIMIT = 3;
-      const CHECKOUT_URL = "/checkout";
+      let checkoutUrl = "#pricing";
+
+      async function loadConfig() {
+        try {
+          const res = await fetch("/config");
+          if (!res.ok) return;
+          const cfg = await res.json();
+          if (cfg.stripe_checkout_url) {
+            checkoutUrl = cfg.stripe_checkout_url;
+            document.querySelectorAll("a[data-checkout]").forEach((a) => {
+              a.href = checkoutUrl;
+            });
+          }
+        } catch (err) {
+          console.warn("config load failed", err);
+        }
+      }
 
       (function showCheckoutBanner() {
         const params = new URLSearchParams(window.location.search);
@@ -644,7 +660,7 @@
         </article>`;
       };
 
-      const paywallOverlay = `
+      const renderPaywallOverlay = () => `
       <div class="paywall-overlay">
         <div class="paywall-card">
           <div class="paywall-icon">
@@ -655,7 +671,7 @@
           </div>
           <h3>Unlock the full archive</h3>
           <p>Every regulatory update, searchable history, email alerts on high-impact changes, and exportable summaries.</p>
-          <a class="paywall-cta" href="${CHECKOUT_URL}">
+          <a class="paywall-cta" href="${checkoutUrl}" data-checkout>
             Get Full Access <span class="price">· $199/month</span>
           </a>
           <div class="paywall-fine">Cancel anytime · Secure checkout by Stripe</div>
@@ -694,14 +710,17 @@
           root.innerHTML =
             visibleHtml +
             (locked.length > 0
-              ? `<div class="paywall"><div class="paywall-stack">${lockedHtml}</div>${paywallOverlay}</div>`
+              ? `<div class="paywall"><div class="paywall-stack">${lockedHtml}</div>${renderPaywallOverlay()}</div>`
               : "");
         } catch (err) {
           root.innerHTML = `<div class="error">Couldn't load updates: ${esc(err.message)}. Please refresh.</div>`;
         }
       }
 
-      load();
+      (async () => {
+        await loadConfig();
+        await load();
+      })();
     </script>
   </body>
 </html>

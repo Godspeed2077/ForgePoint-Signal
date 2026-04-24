@@ -1,11 +1,17 @@
 require('dotenv').config();
 
 const Anthropic = require('@anthropic-ai/sdk');
+const { isRelevant, CORE_KEYWORDS } = require('./keywords.js');
 
 const FEDERAL_REGISTER_ENDPOINT = 'https://www.federalregister.gov/api/v1/documents.json';
 const DEFAULT_LOOKBACK_DAYS = 30;
 const PER_PAGE = 100;
 const SEARCH_TERMS = ['estate tax', 'gift tax'];
+
+// Restrict to publishers that actually issue estate/gift/GST/trust tax
+// regulations. Eliminates the SEC / NLRB / DOL etc. false positives that
+// the unscoped full-text term search was pulling in.
+const AGENCIES = ['internal-revenue-service', 'treasury-department'];
 
 const FIELDS = [
   'document_number',
@@ -32,6 +38,7 @@ async function fetchFederalRegister(term, since) {
   params.set('order', 'newest');
   params.set('conditions[term]', term);
   params.set('conditions[publication_date][gte]', since);
+  for (const a of AGENCIES) params.append('conditions[agencies][]', a);
   for (const f of FIELDS) params.append('fields[]', f);
 
   const url = `${FEDERAL_REGISTER_ENDPOINT}?${params.toString()}`;
@@ -60,12 +67,22 @@ function dedupeByDocumentNumber(docs) {
   return [...seen.values()];
 }
 
-const EXTRACT_SYSTEM = `You extract structured metadata from U.S. Federal Register documents about federal estate and gift tax regulations.
+const EXTRACT_SYSTEM = `You classify and extract metadata from U.S. Federal Register documents.
+
+ForgePoint Signal monitors ONLY documents that are directly about U.S. federal:
+- estate tax, gift tax, generation-skipping transfer tax, or inheritance tax
+- Form 706, Form 709
+- estate planning, applicable exclusion / unified credit
+- trust taxation (grantor trusts, complex / simple trust rules, fiduciary income tax to the extent it intersects estate/gift/GST)
+- Internal Revenue Code Subtitle B (Chapters 11, 12, 13)
+
+A document is NOT relevant if it is primarily about: income tax (other than trust intersections), payroll/employment tax, excise tax, SEC / investment adviser rules, labor law, ERISA / pension regulation, banking, or any non-tax topic — even if it mentions "estate tax" or "gift tax" in passing.
 
 Return ONLY a JSON object with these keys:
-- "summary": plain-English summary, UNDER 150 words, written for a tax professional. No preamble.
-- "impact_level": one of "low", "medium", "high". Judge by scope: a technical correction is "low"; a notice of proposed rulemaking affecting many filers is "medium"; a final rule changing exemption amounts or core compliance obligations is "high".
-- "effective_date": ISO date (YYYY-MM-DD) if explicitly stated in the document, otherwise null. Do not guess.
+- "relevant": true if the document is directly about the topics above, otherwise false.
+- "summary": plain-English summary, UNDER 150 words, written for a tax professional. No preamble. (May be null when relevant=false.)
+- "impact_level": one of "low", "medium", "high". Technical correction = low; notice of proposed rulemaking affecting many filers = medium; final rule changing exemption amounts or core compliance obligations = high. (May be null when relevant=false.)
+- "effective_date": ISO date (YYYY-MM-DD) if explicitly stated, otherwise null. Do not guess.
 
 No other keys. No markdown. No commentary.`;
 
@@ -91,9 +108,11 @@ function parseExtraction(text) {
   if (!match) throw new Error(`No JSON object in model response: ${text.slice(0, 200)}`);
   const parsed = JSON.parse(match[0]);
   const level = String(parsed.impact_level || '').toLowerCase();
+  const relevant = parsed.relevant === true;
   return {
-    summary: typeof parsed.summary === 'string' ? parsed.summary.trim() : null,
-    impact_level: ['low', 'medium', 'high'].includes(level) ? level : null,
+    relevant,
+    summary: relevant && typeof parsed.summary === 'string' ? parsed.summary.trim() : null,
+    impact_level: relevant && ['low', 'medium', 'high'].includes(level) ? level : null,
     effective_date: parsed.effective_date || null,
   };
 }
@@ -150,11 +169,19 @@ async function main() {
 
   const client = new Anthropic({ apiKey: anthropicKey });
 
-  console.log(`Config: apiBase=${apiBase} lookback=${lookback}d since=${since} terms=${JSON.stringify(SEARCH_TERMS)}`);
+  console.log(`Config: apiBase=${apiBase} lookback=${lookback}d since=${since} terms=${JSON.stringify(SEARCH_TERMS)} agencies=${JSON.stringify(AGENCIES)}`);
   console.log(`Fetching Federal Register documents since ${since}...`);
   const batches = await Promise.all(SEARCH_TERMS.map((term) => fetchFederalRegister(term, since)));
-  const docs = dedupeByDocumentNumber(batches.flat());
-  console.log(`Found ${docs.length} unique documents across ${SEARCH_TERMS.length} search terms (before filtering).`);
+  const fetched = dedupeByDocumentNumber(batches.flat());
+  console.log(`Fetched ${fetched.length} unique documents across ${SEARCH_TERMS.length} search terms (agency-filtered).`);
+
+  // Layer 2: post-fetch keyword pre-filter on title+abstract. Cheap; skips
+  // the Claude call on docs that obviously aren't about estate / gift /
+  // GST / trust tax.
+  const docs = fetched.filter((d) => isRelevant(d.title, d.abstract));
+  console.log(
+    `Keyword-filtered to ${docs.length}/${fetched.length} (kept docs where title or abstract matches one of: ${CORE_KEYWORDS.slice(0, 8).join(', ')}, ...).`,
+  );
 
   if (docs.length === 0) {
     console.log('No documents matched. Done.');
@@ -163,8 +190,8 @@ async function main() {
 
   let created = 0;
   let failed = 0;
-
   let skipped = 0;
+  let irrelevant = 0;
   for (const doc of docs) {
     if (!doc.html_url || !doc.title) {
       skipped += 1;
@@ -174,6 +201,13 @@ async function main() {
     console.log(`\nProcessing ${doc.document_number}: "${doc.title.slice(0, 70)}"`);
     try {
       const extracted = await extractWithClaude(client, doc);
+      // Layer 3: Claude relevance gate. If Claude reads the abstract and
+      // says it isn't actually about the topics we monitor, skip.
+      if (!extracted.relevant) {
+        irrelevant += 1;
+        console.log(`    SKIP (claude relevant=false)`);
+        continue;
+      }
       console.log(`    parsed: impact=${extracted.impact_level} effective=${extracted.effective_date} summary_chars=${extracted.summary?.length ?? 0}`);
       const agencyNames = (doc.agencies || []).map((a) => a.name).filter(Boolean);
       const entry = {
@@ -202,7 +236,9 @@ async function main() {
     }
   }
 
-  console.log(`\nDone. Fetched: ${docs.length}. Created/updated: ${created}. Skipped: ${skipped}. Failed: ${failed}.`);
+  console.log(
+    `\nDone. Fetched: ${fetched.length}. Keyword-passed: ${docs.length}. Created/updated: ${created}. Irrelevant (claude): ${irrelevant}. Skipped: ${skipped}. Failed: ${failed}.`,
+  );
 }
 
 main().catch((err) => {

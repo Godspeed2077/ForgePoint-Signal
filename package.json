@@ -8,7 +8,8 @@
     "start": "node server.js",
     "dev": "node server.js",
     "ingest": "node scripts/ingest.js",
-    "ingest:irs": "node scripts/ingest-irs.js"
+    "ingest:irs": "node scripts/ingest-irs.js",
+    "cleanup:off-topic": "node scripts/cleanup-off-topic.js"
   },
   "engines": {
     "node": ">=18"

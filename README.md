@@ -172,10 +172,39 @@ Two scripts run daily via GitHub Actions cron and feed the same
   HTML scrape fallback) and filters for estate, gift, trust, inheritance,
   Form 706 / 709, and generation-skipping items.
 
-For each match, Claude Haiku 4.5 extracts a <150-word summary, an impact
-level (`low`/`medium`/`high`), and an effective date when one is stated,
-then the result is POSTed to `/entries`. Both scripts are safe to re-run
-(the endpoint upserts on `source_url`).
+Both scripts apply three layers of relevance filtering before insertion:
+
+1. **API-side filter.** `ingest.js` passes `conditions[agencies][]` to
+   restrict Federal Register results to IRS / Treasury, eliminating the
+   SEC / NLRB / DOL false positives that the unscoped full-text search was
+   producing.
+2. **Keyword pre-filter.** Both scripts share `scripts/keywords.js`. A
+   document is only sent to Claude if its title or abstract contains one of
+   the topical phrases (`estate tax`, `gift tax`, `generation-skipping`,
+   `Form 706/709`, `applicable exclusion`, `grantor trust`, etc.).
+3. **Claude relevance gate.** The extraction prompt asks Claude to set
+   `relevant: true|false`. Items where Claude says `false` are skipped
+   before the POST to `/entries`, so they never enter the database.
+
+For each surviving match, Claude Haiku 4.5 extracts a <150-word summary, an
+impact level (`low`/`medium`/`high`), and an effective date when one is
+stated, then the result is POSTed to `/entries`. Both scripts are safe to
+re-run (the endpoint upserts on `source_url`).
+
+### Cleaning up existing off-topic rows
+
+If your `regulatory_entries` table already has rows that pre-date the
+relevance filters (e.g. SEC Form PF, FLSA labor rules), run:
+
+```bash
+npm run cleanup:off-topic                # dry-run, lists what would go
+npm run cleanup:off-topic -- --apply     # actually delete
+```
+
+The script reads `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` from `.env`
+and talks to Supabase directly (bypasses the API). It uses the same
+keyword list as the ingest scripts, so anything it would delete is
+something the new ingest would also reject.
 
 ```bash
 # one-time

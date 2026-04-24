@@ -3,6 +3,7 @@ require('dotenv').config();
 const Parser = require('rss-parser');
 const cheerio = require('cheerio');
 const Anthropic = require('@anthropic-ai/sdk');
+const { isRelevant: isTopical, CORE_KEYWORDS } = require('./keywords.js');
 
 // RSS candidates tried in order. The first one that parses with >0 items wins.
 // If all fail we fall back to HTML scraping of the Newsroom index.
@@ -15,23 +16,12 @@ const HTML_INDEX_FALLBACK = 'https://www.irs.gov/newsroom';
 const UA =
   'Mozilla/5.0 (compatible; ForgePointSignal/1.0; +https://forgepointsignal.com)';
 
-const KEYWORDS = [
-  'estate tax',
-  'gift tax',
-  'inheritance',
-  'trusts',
-  'form 706',
-  'form 709',
-  'generation-skipping',
-  'generation skipping',
-];
-
 const parser = new Parser({ timeout: 20000, headers: { 'User-Agent': UA } });
 
-function matches(text) {
-  if (!text) return false;
-  const lower = String(text).toLowerCase();
-  return KEYWORDS.some((k) => lower.includes(k.toLowerCase()));
+// Topical filter — defers to the shared CORE_KEYWORDS list so the
+// Federal Register and IRS pipelines stay in lockstep.
+function matches(...texts) {
+  return isTopical(...texts);
 }
 
 function toIsoDate(value) {
@@ -171,13 +161,23 @@ async function loadItems() {
   throw new Error('No items available from RSS or HTML sources.');
 }
 
-const EXTRACT_SYSTEM = `You extract structured metadata from IRS Newsroom items about U.S. federal estate, gift, trust, and inheritance tax.
+const EXTRACT_SYSTEM = `You classify and extract metadata from IRS Newsroom items.
+
+ForgePoint Signal monitors ONLY items that are directly about U.S. federal:
+- estate tax, gift tax, generation-skipping transfer tax, or inheritance tax
+- Form 706, Form 709
+- estate planning, applicable exclusion / unified credit
+- trust taxation (grantor trusts, fiduciary income tax to the extent it intersects estate / gift / GST)
+- Internal Revenue Code Subtitle B (Chapters 11, 12, 13)
+
+An item is NOT relevant if it is primarily about: income tax (other than trust intersections), payroll/employment tax, excise tax, scam alerts, taxpayer-assistance announcements, identity theft, or any non-tax topic — even if it mentions "estate tax" or "gift tax" in passing.
 
 Return ONLY a JSON object with these keys:
-- "summary": plain-English summary, UNDER 150 words, written for a tax professional. No preamble.
-- "impact_level": one of "low", "medium", "high". Routine guidance or reminders are "low"; new procedures or forms affecting many filers are "medium"; changes to exemption amounts, rates, or core compliance obligations are "high".
-- "effective_date": ISO date (YYYY-MM-DD) if explicitly stated in the item, otherwise null. Do not guess.
-- "category": one of "estate", "gift", "trust", "tax". Pick the single best fit.
+- "relevant": true if the item is directly about the topics above, otherwise false.
+- "summary": plain-English summary, UNDER 150 words, written for a tax professional. No preamble. (Null when relevant=false.)
+- "impact_level": "low", "medium", or "high". Routine reminders / scam alerts (if those slipped through) = low; new procedures or forms affecting many filers = medium; changes to exemption amounts, rates, or core compliance obligations = high. (Null when relevant=false.)
+- "effective_date": ISO date (YYYY-MM-DD) if explicitly stated, otherwise null. Do not guess.
+- "category": "estate", "gift", "trust", or "tax". Pick the single best fit. (Null when relevant=false.)
 
 No other keys. No markdown. No commentary.`;
 
@@ -197,13 +197,15 @@ function parseExtraction(text) {
   const match = text.match(/\{[\s\S]*\}/);
   if (!match) throw new Error(`No JSON object in model response: ${text.slice(0, 200)}`);
   const parsed = JSON.parse(match[0]);
+  const relevant = parsed.relevant === true;
   const level = String(parsed.impact_level || '').toLowerCase();
   const cat = String(parsed.category || '').toLowerCase();
   return {
-    summary: typeof parsed.summary === 'string' ? parsed.summary.trim() : null,
-    impact_level: ['low', 'medium', 'high'].includes(level) ? level : null,
+    relevant,
+    summary: relevant && typeof parsed.summary === 'string' ? parsed.summary.trim() : null,
+    impact_level: relevant && ['low', 'medium', 'high'].includes(level) ? level : null,
     effective_date: parsed.effective_date || null,
-    category: ['estate', 'gift', 'trust', 'tax'].includes(cat) ? cat : null,
+    category: relevant && ['estate', 'gift', 'trust', 'tax'].includes(cat) ? cat : null,
   };
 }
 
@@ -258,7 +260,9 @@ async function main() {
   const client = new Anthropic({ apiKey: anthropicKey });
 
   console.log(`Config: apiBase=${apiBase}`);
-  console.log(`Loading IRS items (keywords: ${KEYWORDS.join(', ')})`);
+  console.log(
+    `Loading IRS items (keywords: ${CORE_KEYWORDS.slice(0, 8).join(', ')}, ...)`,
+  );
 
   const { sourceKind, sourceUrl, items } = await loadItems();
   console.log(`Source: kind=${sourceKind} url=${sourceUrl} items=${items.length}`);
@@ -268,9 +272,7 @@ async function main() {
     );
   }
 
-  const matched = items.filter(
-    (it) => matches(it.title) || matches(it.content),
-  );
+  const matched = items.filter((it) => matches(it.title, it.content));
   console.log(`Matched ${matched.length}/${items.length} by keywords.`);
   if (matched.length === 0) {
     console.log('No matching items. Done.');
@@ -304,6 +306,14 @@ async function main() {
 
     try {
       const extracted = await extractWithClaude(client, item);
+      // Claude relevance gate: even if the item passed the keyword filter,
+      // skip if Claude reads the body and decides it isn't actually about
+      // estate / gift / GST / trust tax.
+      if (!extracted.relevant) {
+        skipped += 1;
+        console.log(`    SKIP (claude relevant=false)`);
+        continue;
+      }
       console.log(
         `    parsed: category=${extracted.category} impact=${extracted.impact_level} effective=${extracted.effective_date} summary_chars=${extracted.summary?.length ?? 0}`,
       );

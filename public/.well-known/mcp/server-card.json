@@ -1,36 +1,81 @@
 {
-  "name": "ForgePoint Signal",
-  "description": "Daily regulatory monitoring for US estate, trust, and tax law changes. MCP-native with x402 micropayment support. Updated daily from the Federal Register and IRS Newsroom.",
-  "url": "https://forgepointsignal.com",
-  "mcp_endpoint": "https://forgepointsignal.com/mcp",
-  "version": "1.0.0",
+  "$schema": "https://modelcontextprotocol.io/schemas/server-card.json",
+  "protocolVersion": "2024-11-05",
+  "serverInfo": {
+    "name": "forgepoint-signal",
+    "title": "ForgePoint Signal",
+    "version": "1.0.0",
+    "description": "Daily regulatory monitoring for US estate, trust, and tax law changes. MCP-native with x402 micropayment support. Updated daily from the Federal Register and IRS Newsroom.",
+    "vendor": "ForgePoint Industries",
+    "homepage": "https://forgepointsignal.com",
+    "documentation": "https://forgepointsignal.com/llms.txt"
+  },
+  "transport": {
+    "type": "streamable-http",
+    "url": "https://forgepointsignal.com/mcp"
+  },
+  "capabilities": {
+    "tools": { "listChanged": true }
+  },
+  "auth": {
+    "type": "none"
+  },
   "tools": [
     {
       "name": "preview_regulations",
-      "description": "Free preview of 5 most recent regulatory changes",
-      "paid": false
+      "description": "Get a free preview of the 5 most recent US regulatory changes monitored by ForgePoint Signal. Covers estate, trust, gift, and inheritance tax law. Updated daily from the Federal Register and IRS Newsroom.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      }
     },
     {
       "name": "search_regulations",
-      "description": "Search full regulatory database",
-      "paid": true,
-      "price": "$0.10 USDC"
+      "description": "Search the full ForgePoint Signal regulatory database by keyword, jurisdiction (federal/state), category (estates/trusts/tax/gift), or impact level (low/medium/high). Returns full entries with plain-English summaries and source links. Updated daily from the Federal Register and IRS Newsroom.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "query": { "type": "string" },
+          "jurisdiction": { "type": "string" },
+          "category": { "type": "string" },
+          "impact_level": { "type": "string", "enum": ["low", "medium", "high"] },
+          "limit": { "type": "number" }
+        }
+      }
     },
     {
       "name": "get_regulation_detail",
-      "description": "Full detail for a specific regulation entry",
-      "paid": true,
-      "price": "$0.10 USDC"
+      "description": "Get complete detail for a specific regulation entry including full summary, affected law or code section, effective date, and source document link. Data is sourced from the Federal Register and IRS Newsroom.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "entry_id": { "type": "string" }
+        },
+        "required": ["entry_id"]
+      }
     },
     {
       "name": "get_recent_by_impact",
-      "description": "Recent entries filtered by impact level",
-      "paid": true,
-      "price": "$0.10 USDC"
+      "description": "Get the most recent high-impact regulatory changes sorted by impact level. Ideal for daily briefings or monitoring material changes requiring immediate attention. Updated daily from the Federal Register and IRS Newsroom.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "impact_level": { "type": "string", "enum": ["low", "medium", "high"] },
+          "limit": { "type": "number" }
+        }
+      }
     }
   ],
-  "payment_protocol": "x402",
-  "payment_network": "base-mainnet",
-  "payment_currency": "USDC",
+  "payment": {
+    "protocol": "x402",
+    "network": "base-mainnet",
+    "currency": "USDC",
+    "price_per_call": "$0.10",
+    "paid_tools": [
+      "search_regulations",
+      "get_regulation_detail",
+      "get_recent_by_impact"
+    ]
+  },
   "data_sources": ["federal-register", "irs-newsroom"]
 }

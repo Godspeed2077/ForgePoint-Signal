@@ -1,6 +1,6 @@
 # ForgePoint Signal
 
-ForgePoint Signal monitors US federal and state regulatory changes affecting estate, trust, gift, and inheritance tax law. Data is ingested daily from the Federal Register and IRS notices, parsed by AI into structured JSON, and served via MCP.
+ForgePoint Signal monitors US federal and state regulatory changes affecting estate, trust, gift, and inheritance tax law. Estate, gift, trust, and inheritance tax regulatory changes monitored daily from the Federal Register and IRS Newsroom, parsed by AI into structured JSON, and served via MCP.
 
 ## MCP Server
 Endpoint: https://forgepointsignal.com/mcp
@@ -29,7 +29,7 @@ Payment: x402, USDC on Base mainnet
 - IRS Newsroom (irs.gov/newsroom)
 
 ## Update Frequency
-Daily via automated cron job
+Daily via automated cron (Federal Register + IRS Newsroom)
 
 ## Use Cases
 - Daily regulatory briefings for estate attorneys

@@ -10,7 +10,7 @@ I built **ForgePoint Signal** to fix that. It monitors federal estate, gift, tru
 
 The pipeline is simple:
 
-- **Ingest** — A GitHub Actions cron runs daily at 13:15 UTC. It pulls the last 30 days of estate-tax and gift-tax documents from the Federal Register API and dedupes on document number.
+- **Ingest** — A GitHub Actions cron runs daily at 13:15 UTC. It pulls the last 30 days of estate-tax and gift-tax documents from the Federal Register API and the latest IRS Newsroom items (RSS with an HTML-scrape fallback), filters for estate/gift/trust/inheritance/Form 706/Form 709/generation-skipping keywords, and dedupes by source URL.
 - **Parse** — For each new doc, Claude Haiku 4.5 extracts a <150-word plain-English summary, an impact level (low/medium/high), and a stated effective date when the document specifies one.
 - **Store** — Results go into a `regulatory_entries` table in Supabase, keyed uniquely on source URL so the cron is idempotent.
 - **Serve** — A single Vercel serverless function hosts both a human-facing dashboard and the MCP server. Paid MCP tools are gated with x402 — a $0.10 USDC micropayment on Base mainnet, verified against the public x402 facilitator.
@@ -69,7 +69,7 @@ Drop this into your MCP client config — Claude Desktop, Cursor, Cline, whateve
 
 - A richer human dashboard at forgepointsignal.com — full-text search, high-impact alerts, maybe an email digest.
 - A traditional **$199/month Stripe tier** for humans who don't want to think in USDC micropayments.
-- More data sources: IRS newsroom, state-level revenue departments, Tax Court opinions. The parsing pipeline is source-agnostic — adding a source is a ~50-line diff.
+- More data sources beyond Federal Register and IRS Newsroom: state-level revenue departments, Tax Court opinions. The parsing pipeline is source-agnostic — adding a source is a ~50-line diff.
 
 ## Try It
 

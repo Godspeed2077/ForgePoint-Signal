@@ -127,11 +127,19 @@ To wire up billing:
 
 ## Data ingestion
 
-`scripts/ingest.js` pulls the last 30 days of estate-tax and gift-tax documents
-from the Federal Register API, asks Claude (`claude-opus-4-7`) to extract a
-<150-word summary, an impact level (`low`/`medium`/`high`), and an effective
-date when one is stated, then POSTs each one to `/entries`. The endpoint
-upserts on `source_url`, so the script is safe to re-run.
+Two scripts run daily via GitHub Actions cron and feed the same
+`regulatory_entries` table, keyed uniquely on `source_url`:
+
+- `scripts/ingest.js` pulls the last 30 days of estate-tax and gift-tax
+  documents from the Federal Register API.
+- `scripts/ingest-irs.js` pulls the IRS Newsroom (RSS when available, with
+  HTML scrape fallback) and filters for estate, gift, trust, inheritance,
+  Form 706 / 709, and generation-skipping items.
+
+For each match, Claude Haiku 4.5 extracts a <150-word summary, an impact
+level (`low`/`medium`/`high`), and an effective date when one is stated,
+then the result is POSTed to `/entries`. Both scripts are safe to re-run
+(the endpoint upserts on `source_url`).
 
 ```bash
 # one-time

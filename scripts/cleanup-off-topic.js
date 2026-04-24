@@ -1,9 +1,11 @@
-// One-shot cleanup: removes regulatory_entries rows whose title and summary
-// don't match any topical keyword. Run with --apply to actually delete;
-// without --apply it's a dry-run that just prints what would be removed.
+// One-shot cleanup: removes regulatory_entries rows whose text doesn't
+// match any topical keyword. Run with --apply to actually delete; without
+// --apply it's a dry-run that just prints what would be removed.
 //
-//   npm run cleanup:off-topic            # dry-run
-//   npm run cleanup:off-topic -- --apply # delete for real
+//   npm run cleanup:off-topic                            # dry-run, checks title + summary + abstract
+//   npm run cleanup:off-topic -- --apply                 # delete for real
+//   npm run cleanup:off-topic -- --title-only            # dry-run, checks title only (stricter)
+//   npm run cleanup:off-topic -- --title-only --apply    # delete for real, title-only
 //
 // Reads SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY from env. Does NOT go
 // through the API — talks directly to Supabase, so it needs the service
@@ -16,6 +18,7 @@ const { CORE_KEYWORDS, isRelevant } = require('./keywords.js');
 
 async function main() {
   const apply = process.argv.includes('--apply');
+  const titleOnly = process.argv.includes('--title-only');
 
   const url = process.env.SUPABASE_URL;
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -29,6 +32,7 @@ async function main() {
   const supabase = createClient(url, serviceKey);
 
   console.log(`Mode: ${apply ? 'APPLY (will delete)' : 'dry-run (no writes)'}`);
+  console.log(`Match scope: ${titleOnly ? 'title only' : 'title + summary + abstract'}`);
   console.log(`Keyword set: ${CORE_KEYWORDS.length} terms`);
 
   // Pull every row in pages of 1000 (Supabase REST default cap).
@@ -50,9 +54,10 @@ async function main() {
     total += data.length;
     for (const row of data) {
       const abstract = row.raw_json?.abstract || '';
-      if (!isRelevant(row.title, row.summary, abstract)) {
-        offTopic.push(row);
-      }
+      const matched = titleOnly
+        ? isRelevant(row.title)
+        : isRelevant(row.title, row.summary, abstract);
+      if (!matched) offTopic.push(row);
     }
     if (data.length < pageSize) break;
     offset += pageSize;

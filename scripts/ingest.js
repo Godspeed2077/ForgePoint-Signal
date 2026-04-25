@@ -8,10 +8,18 @@ const DEFAULT_LOOKBACK_DAYS = 30;
 const PER_PAGE = 100;
 const SEARCH_TERMS = ['estate tax', 'gift tax'];
 
-// Restrict to publishers that actually issue estate/gift/GST/trust tax
-// regulations. Eliminates the SEC / NLRB / DOL etc. false positives that
-// the unscoped full-text term search was pulling in.
-const AGENCIES = ['internal-revenue-service', 'treasury-department'];
+// Restrict to publishers that issue rules of interest to estate planners:
+//   IRS / Treasury — estate, gift, GST, trust, charitable, retirement tax rules
+//   DOL          — ERISA fiduciary rules for retirement plans
+//   SEC          — investment-adviser fiduciary rules (family-office relevance)
+// The keyword pre-filter and Claude relevance gate downstream still
+// discard agency documents that aren't actually about these topics.
+const AGENCIES = [
+  'internal-revenue-service',
+  'treasury-department',
+  'labor-department',
+  'securities-and-exchange-commission',
+];
 
 const FIELDS = [
   'document_number',
@@ -67,21 +75,30 @@ function dedupeByDocumentNumber(docs) {
   return [...seen.values()];
 }
 
-const EXTRACT_SYSTEM = `You classify and extract metadata from U.S. Federal Register documents.
+const EXTRACT_SYSTEM = `You classify and extract metadata from U.S. Federal Register documents for an audience of estate planners, trust attorneys, and family-office advisors.
 
-ForgePoint Signal monitors ONLY documents that are directly about U.S. federal:
-- estate tax, gift tax, generation-skipping transfer tax, or inheritance tax
+A document IS relevant if it is directly about any of:
+- estate tax, gift tax, generation-skipping transfer tax, inheritance tax
 - Form 706, Form 709
 - estate planning, applicable exclusion / unified credit
-- trust taxation (grantor trusts, complex / simple trust rules, fiduciary income tax to the extent it intersects estate/gift/GST)
+- trust taxation and trust administration (grantor trusts, fiduciary income tax)
 - Internal Revenue Code Subtitle B (Chapters 11, 12, 13)
+- fiduciary duties for trusts, estates, or retirement plans (including ERISA fiduciary rules and SEC investment-adviser fiduciary rules)
+- probate
+- charitable giving and tax-exempt structures: 501(c)(3) public charities, private foundations, donor-advised funds, charitable remainder trusts, charitable lead trusts, charitable deductions
+- basis step-up at death (stepped-up basis)
+- qualified opportunity zones
+- retirement accounts as estate-planning vehicles: IRAs, required minimum distributions, inherited IRAs
+- life insurance and annuities used for wealth transfer
+- state-level estate or inheritance tax
+- family-office and high-net-worth wealth-transfer rules
 
-A document is NOT relevant if it is primarily about: income tax (other than trust intersections), payroll/employment tax, excise tax, SEC / investment adviser rules, labor law, ERISA / pension regulation, banking, or any non-tax topic — even if it mentions "estate tax" or "gift tax" in passing.
+A document is NOT relevant if it is primarily about: pure individual or corporate income tax (with no trust/estate intersection), payroll or employment tax, excise tax, banking or securities trading rules unrelated to fiduciary duties, anti-money-laundering or sanctions, or anything that only mentions estate/gift/trust topics in passing.
 
 Return ONLY a JSON object with these keys:
 - "relevant": true if the document is directly about the topics above, otherwise false.
-- "summary": plain-English summary, UNDER 150 words, written for a tax professional. No preamble. (May be null when relevant=false.)
-- "impact_level": one of "low", "medium", "high". Technical correction = low; notice of proposed rulemaking affecting many filers = medium; final rule changing exemption amounts or core compliance obligations = high. (May be null when relevant=false.)
+- "summary": plain-English summary, UNDER 150 words, written for an estate / trust / wealth-management professional. No preamble. (May be null when relevant=false.)
+- "impact_level": one of "low", "medium", "high". Technical correction = low; notice of proposed rulemaking affecting many filers = medium; final rule changing exemption amounts, fiduciary obligations, or core compliance = high. (May be null when relevant=false.)
 - "effective_date": ISO date (YYYY-MM-DD) if explicitly stated, otherwise null. Do not guess.
 
 No other keys. No markdown. No commentary.`;

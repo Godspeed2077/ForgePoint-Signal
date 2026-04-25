@@ -161,21 +161,30 @@ async function loadItems() {
   throw new Error('No items available from RSS or HTML sources.');
 }
 
-const EXTRACT_SYSTEM = `You classify and extract metadata from IRS Newsroom items.
+const EXTRACT_SYSTEM = `You classify and extract metadata from IRS Newsroom items for an audience of estate planners, trust attorneys, and family-office advisors.
 
-ForgePoint Signal monitors ONLY items that are directly about U.S. federal:
-- estate tax, gift tax, generation-skipping transfer tax, or inheritance tax
+An item IS relevant if it is directly about any of:
+- estate tax, gift tax, generation-skipping transfer tax, inheritance tax
 - Form 706, Form 709
 - estate planning, applicable exclusion / unified credit
-- trust taxation (grantor trusts, fiduciary income tax to the extent it intersects estate / gift / GST)
+- trust taxation and trust administration (grantor trusts, fiduciary income tax)
 - Internal Revenue Code Subtitle B (Chapters 11, 12, 13)
+- fiduciary duties for trusts, estates, or retirement plans
+- probate
+- charitable giving and tax-exempt structures: 501(c)(3) public charities, private foundations, donor-advised funds, charitable remainder / lead trusts, charitable deductions
+- basis step-up at death
+- qualified opportunity zones
+- retirement accounts as estate-planning vehicles: IRAs, required minimum distributions, inherited IRAs
+- life insurance and annuities used for wealth transfer
+- state-level estate or inheritance tax
+- family-office and high-net-worth wealth-transfer rules
 
-An item is NOT relevant if it is primarily about: income tax (other than trust intersections), payroll/employment tax, excise tax, scam alerts, taxpayer-assistance announcements, identity theft, or any non-tax topic — even if it mentions "estate tax" or "gift tax" in passing.
+An item is NOT relevant if it is primarily about: pure individual or corporate income tax (with no trust/estate intersection), payroll or employment tax, excise tax, scam alerts, identity-theft warnings, taxpayer-assistance announcements, or anything that only mentions estate/gift/trust topics in passing.
 
 Return ONLY a JSON object with these keys:
 - "relevant": true if the item is directly about the topics above, otherwise false.
-- "summary": plain-English summary, UNDER 150 words, written for a tax professional. No preamble. (Null when relevant=false.)
-- "impact_level": "low", "medium", or "high". Routine reminders / scam alerts (if those slipped through) = low; new procedures or forms affecting many filers = medium; changes to exemption amounts, rates, or core compliance obligations = high. (Null when relevant=false.)
+- "summary": plain-English summary, UNDER 150 words, written for an estate / trust / wealth-management professional. No preamble. (Null when relevant=false.)
+- "impact_level": "low", "medium", or "high". Routine reminder = low; new procedure or form affecting many filers = medium; change to exemption amounts, rates, fiduciary obligations, or core compliance = high. (Null when relevant=false.)
 - "effective_date": ISO date (YYYY-MM-DD) if explicitly stated, otherwise null. Do not guess.
 - "category": "estate", "gift", "trust", or "tax". Pick the single best fit. (Null when relevant=false.)
 

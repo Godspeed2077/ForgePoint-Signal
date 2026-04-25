@@ -7,7 +7,7 @@
 // only mention "estate tax" in passing; this list filters those out.
 
 const CORE_KEYWORDS = [
-  // Direct tax-law phrases
+  // --- Estate / gift / GST / inheritance tax (existing core) ---
   'estate tax',
   'estate taxes',
   'gift tax',
@@ -38,6 +38,36 @@ const CORE_KEYWORDS = [
   'chapter 12 of the internal revenue code',
   'chapter 13 of the internal revenue code',
   'subtitle b of the internal revenue code',
+
+  // --- Tier 1: trust admin, fiduciary, charitable, basis, opportunity zones ---
+  'trust administration',
+  'fiduciary',
+  'probate',
+  'charitable giving',
+  'charitable deduction',
+  'donor advised fund',
+  'private foundation',
+  'step-up in basis',
+  'stepped-up basis',
+  'qualified opportunity zone',
+  'opportunity zone',
+  '501(c)(3)',
+  'charitable remainder',
+  'charitable lead trust',
+
+  // --- Tier 2: retirement accounts, insurance, state-level, wealth management ---
+  'individual retirement account',
+  'ira distribution',
+  'required minimum distribution',
+  'rmd',
+  'inherited ira',
+  'life insurance',
+  'annuity',
+  'state estate tax',
+  'state inheritance tax',
+  'wealth transfer',
+  'high net worth',
+  'family office',
 ];
 
 function haystack(parts) {

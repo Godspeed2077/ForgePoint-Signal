@@ -176,7 +176,18 @@ JSON only, no markdown fences:
       },
       { signal: ctrl.signal, maxRetries: 0 },
     );
-    return JSON.parse(msg.content[0].text.replace(/```json|```/g, '').trim());
+    // Extract the first JSON object out of the raw response. Claude
+    // sometimes appends an explanatory sentence after a valid JSON
+    // object (e.g. `{"relevant":true,...}\n\nThis appears to be...`),
+    // which trips JSON.parse with "Unexpected non-whitespace character
+    // after JSON". The regex grabs from the first { to the last } so
+    // a single complete object is parsed and trailing prose ignored.
+    const raw = msg.content[0].text.replace(/```json|```/g, '').trim();
+    const jsonMatch = raw.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+      throw new Error(`no JSON object in claude response: ${raw.slice(0, 200)}`);
+    }
+    return JSON.parse(jsonMatch[0]);
   } catch (err) {
     if (err.name === 'AbortError' || /aborted|abort/i.test(err.message || '')) {
       console.log(`    FAIL claude: timed out after ${CLAUDE_TIMEOUT_MS}ms`);
@@ -258,8 +269,12 @@ async function main() {
       // and nothing else) returns an "I don't have enough context"
       // refusal, which fails our JSON parse and lands as FAIL claude.
       // Skip those locally rather than burning a Claude call.
+      // 40-char threshold: bare-citation synopses like "Rev. Rul. 2025-11"
+      // (18 chars) cleared the previous 20-char gate but still left Claude
+      // with no context, producing "I don't have" refusals. 40 chars
+      // requires at least the citation plus a sentence fragment.
       const synopsisLen = (item.synopsis || '').trim().length;
-      if (synopsisLen < 20) {
+      if (synopsisLen < 40) {
         console.log(
           `    SKIP (no synopsis, ${synopsisLen} chars): ${item.citation}`,
         );

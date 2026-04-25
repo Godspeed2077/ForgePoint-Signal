@@ -15,6 +15,13 @@ const HTML_INDEX = 'https://www.irs.gov/newsroom/news-releases-for-current-month
 const HTML_INDEX_FALLBACK = 'https://www.irs.gov/newsroom';
 const UA =
   'Mozilla/5.0 (compatible; ForgePointSignal/1.0; +https://forgepointsignal.com)';
+// Hard cap so a flood of matched items can't blow the workflow timeout.
+// Items are pre-sorted newest-first by RSS / index page; we keep the
+// first MAX_ARTICLES after keyword filtering and skip the rest.
+const MAX_ARTICLES = 10;
+// Per-fetch timeout for article body retrieval. A slow IRS response on a
+// single article shouldn't stall the whole run.
+const FETCH_TIMEOUT_MS = 5000;
 
 const parser = new Parser({ timeout: 20000, headers: { 'User-Agent': UA } });
 
@@ -31,15 +38,27 @@ function toIsoDate(value) {
   return d.toISOString().slice(0, 10);
 }
 
-async function httpGet(url) {
-  const res = await fetch(url, {
-    headers: { 'User-Agent': UA, Accept: 'text/html,application/xhtml+xml,*/*' },
-    redirect: 'follow',
-  });
-  if (!res.ok) {
-    throw new Error(`GET ${url} ${res.status}`);
+async function httpGet(url, timeoutMs = FETCH_TIMEOUT_MS) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch(url, {
+      headers: { 'User-Agent': UA, Accept: 'text/html,application/xhtml+xml,*/*' },
+      redirect: 'follow',
+      signal: controller.signal,
+    });
+    if (!res.ok) {
+      throw new Error(`GET ${url} ${res.status}`);
+    }
+    return await res.text();
+  } catch (err) {
+    if (err.name === 'AbortError') {
+      throw new Error(`GET ${url} timed out after ${timeoutMs}ms`);
+    }
+    throw err;
+  } finally {
+    clearTimeout(timer);
   }
-  return res.text();
 }
 
 async function tryRss(url) {
@@ -288,11 +307,20 @@ async function main() {
     return;
   }
 
+  // Hard cap so the run finishes inside the workflow timeout.
+  let processList = matched;
+  if (matched.length > MAX_ARTICLES) {
+    console.log(
+      `Capping at MAX_ARTICLES=${MAX_ARTICLES} (matched ${matched.length}); processing the newest ${MAX_ARTICLES} and deferring the rest.`,
+    );
+    processList = matched.slice(0, MAX_ARTICLES);
+  }
+
   let created = 0;
   let skipped = 0;
   let failed = 0;
 
-  for (const item of matched) {
+  for (const item of processList) {
     if (!item.link || !item.title) {
       skipped += 1;
       console.log(`  SKIP: missing link or title`);
@@ -355,7 +383,7 @@ async function main() {
   }
 
   console.log(
-    `\nDone. Source=${sourceKind}. Matched: ${matched.length}. Created/updated: ${created}. Skipped: ${skipped}. Failed: ${failed}.`,
+    `\nDone. Source=${sourceKind}. Matched: ${matched.length}. Processed: ${processList.length}. Created/updated: ${created}. Skipped: ${skipped}. Failed: ${failed}.`,
   );
 }
 

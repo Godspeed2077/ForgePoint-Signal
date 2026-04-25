@@ -8,18 +8,22 @@ const DEFAULT_LOOKBACK_DAYS = 30;
 const PER_PAGE = 100;
 const SEARCH_TERMS = ['estate tax', 'gift tax'];
 
-// Restrict to publishers that issue rules of interest to estate planners:
-//   IRS / Treasury — estate, gift, GST, trust, charitable, retirement tax rules
-//   DOL          — ERISA fiduciary rules for retirement plans
-//   SEC          — investment-adviser fiduciary rules (family-office relevance)
-// The keyword pre-filter and Claude relevance gate downstream still
-// discard agency documents that aren't actually about these topics.
-const AGENCIES = [
-  'internal-revenue-service',
-  'treasury-department',
-  'labor-department',
-  'securities-and-exchange-commission',
-];
+// Agency filter has been removed. With agency slugs like
+// 'labor-department' or 'securities-and-exchange-commission' the
+// AND between conditions[agencies][] and conditions[term] was
+// returning 0 results — likely because at least one slug was
+// wrong (FR's canonical slugs come from /api/v1/agencies).
+//
+// Garbage filtering is now done downstream:
+//   1. Keyword pre-filter on title + abstract (scripts/keywords.js,
+//      53 phrases — estate tax / gift tax / trust admin / fiduciary /
+//      probate / charitable structures / IRA-RMD / opportunity zones /
+//      state estate tax, etc.)
+//   2. Claude relevance gate in the extraction call.
+//
+// If we want to re-add an agency filter later, fetch the canonical
+// slugs first from https://www.federalregister.gov/api/v1/agencies
+// rather than guessing.
 
 const FIELDS = [
   'document_number',
@@ -46,7 +50,6 @@ async function fetchFederalRegister(term, since) {
   params.set('order', 'newest');
   params.set('conditions[term]', term);
   params.set('conditions[publication_date][gte]', since);
-  for (const a of AGENCIES) params.append('conditions[agencies][]', a);
   for (const f of FIELDS) params.append('fields[]', f);
 
   const url = `${FEDERAL_REGISTER_ENDPOINT}?${params.toString()}`;
@@ -57,12 +60,38 @@ async function fetchFederalRegister(term, since) {
   }
   const json = await res.json();
   const results = json.results || [];
-  console.log(`    term="${term}" -> count=${json.count ?? 'n/a'} results=${results.length}`);
+  console.log(`    term="${term}" -> total_count=${json.count ?? 'n/a'} returned=${results.length}`);
   if (results.length > 0) {
     const sample = results[0];
     console.log(`    first: ${sample.document_number} "${(sample.title || '').slice(0, 70)}" (${sample.publication_date})`);
   }
   return results;
+}
+
+// Sanity probe — runs once at startup with no filters except the date
+// window. Confirms the API is reachable and returning anything at all.
+// If this returns 0 we know it's a connectivity / API issue, not our
+// filter logic.
+async function broadProbe(since) {
+  const params = new URLSearchParams();
+  params.set('per_page', '1');
+  params.set('order', 'newest');
+  params.set('conditions[publication_date][gte]', since);
+  const url = `${FEDERAL_REGISTER_ENDPOINT}?${params.toString()}`;
+  console.log(`  PROBE ${url}`);
+  try {
+    const res = await fetch(url);
+    if (!res.ok) {
+      console.warn(`    probe failed: HTTP ${res.status}`);
+      return;
+    }
+    const json = await res.json();
+    console.log(
+      `    probe ok: total_count=${json.count ?? 'n/a'} (this is the unfiltered universe of FR docs since ${since})`,
+    );
+  } catch (err) {
+    console.warn(`    probe error: ${err.message}`);
+  }
 }
 
 function dedupeByDocumentNumber(docs) {
@@ -186,8 +215,9 @@ async function main() {
 
   const client = new Anthropic({ apiKey: anthropicKey });
 
-  console.log(`Config: apiBase=${apiBase} lookback=${lookback}d since=${since} terms=${JSON.stringify(SEARCH_TERMS)} agencies=${JSON.stringify(AGENCIES)}`);
+  console.log(`Config: apiBase=${apiBase} lookback=${lookback}d since=${since} terms=${JSON.stringify(SEARCH_TERMS)} agencies=none`);
   console.log(`Fetching Federal Register documents since ${since}...`);
+  await broadProbe(since);
   const batches = await Promise.all(SEARCH_TERMS.map((term) => fetchFederalRegister(term, since)));
   const fetched = dedupeByDocumentNumber(batches.flat());
   console.log(`Fetched ${fetched.length} unique documents across ${SEARCH_TERMS.length} search terms (agency-filtered).`);

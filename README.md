@@ -166,30 +166,37 @@ To wire up billing:
 Two scripts run daily via GitHub Actions cron and feed the same
 `regulatory_entries` table, keyed uniquely on `source_url`:
 
-- `scripts/ingest.js` pulls the last 30 days of estate-tax and gift-tax
-  documents from the Federal Register API.
-- `scripts/ingest-irs.js` pulls the IRS Newsroom (RSS when available, with
-  HTML scrape fallback) and filters for estate, gift, trust, inheritance,
-  Form 706 / 709, and generation-skipping items.
+- `scripts/ingest.js` pulls the last N days (default 90, configurable via
+  `LOOKBACK_DAYS`) of estate-tax and gift-tax documents from the Federal
+  Register API.
+- `scripts/ingest-irb.js` walks weekly Internal Revenue Bulletin issue
+  pages back across the lookback window, parses out Rev. Rul. / Rev. Proc.
+  / Notice / Ann. citations from the issue HTML, and Claude-evaluates each
+  match against the estate / gift / GST / trust planning lens.
 
 Both scripts apply three layers of relevance filtering before insertion:
 
-1. **API-side filter.** `ingest.js` passes `conditions[agencies][]` to
-   restrict Federal Register results to IRS / Treasury, eliminating the
-   SEC / NLRB / DOL false positives that the unscoped full-text search was
-   producing.
+1. **API-side filter.** `ingest.js` passes `conditions[term]` against the
+   Federal Register full-text search; agency narrowing was removed because
+   guessing the canonical agency slug returned zero results.
 2. **Keyword pre-filter.** Both scripts share `scripts/keywords.js`. A
-   document is only sent to Claude if its title or abstract contains one of
-   the topical phrases (`estate tax`, `gift tax`, `generation-skipping`,
-   `Form 706/709`, `applicable exclusion`, `grantor trust`, etc.).
+   document is only sent to Claude if its title (or, in the IRB script,
+   citation + synopsis) contains one of the topical phrases (`estate tax`,
+   `gift tax`, `generation-skipping`, `Form 706/709`, `applicable
+   exclusion`, `grantor trust`, etc.).
 3. **Claude relevance gate.** The extraction prompt asks Claude to set
    `relevant: true|false`. Items where Claude says `false` are skipped
    before the POST to `/entries`, so they never enter the database.
 
-For each surviving match, Claude Haiku 4.5 extracts a <150-word summary, an
-impact level (`low`/`medium`/`high`), and an effective date when one is
-stated, then the result is POSTed to `/entries`. Both scripts are safe to
-re-run (the endpoint upserts on `source_url`).
+In addition, both scripts run a Supabase pre-check via `scripts/dedup.js`
+before every Claude call: if the `source_url` is already in
+`regulatory_entries`, Claude is skipped and the row is counted as
+`Already-stored`. This keeps re-runs cheap.
+
+For each surviving match, Claude Haiku 4.5 extracts a <150-word summary,
+an impact level (where the prompt requests one), and an effective date
+when one is stated, then the result is POSTed to `/entries`. Both scripts
+are safe to re-run (the endpoint upserts on `source_url`).
 
 ### Cleaning up existing off-topic rows
 

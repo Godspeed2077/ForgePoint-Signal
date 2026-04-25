@@ -1,5 +1,6 @@
-// Shared between scripts/ingest.js and scripts/ingest-irs.js so re-runs
-// don't pay for Claude on documents we've already stored.
+// Shared between the ingest scripts (ingest.js for Federal Register,
+// ingest-irb.js for the Internal Revenue Bulletin) so re-runs don't pay
+// for Claude on documents we've already stored.
 //
 // Reads SUPABASE_URL and SUPABASE_ANON_KEY (or SUPABASE_SERVICE_ROLE_KEY)
 // from env. Returns null if either is missing — the ingest scripts then

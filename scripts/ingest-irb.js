@@ -2,7 +2,6 @@ require('dotenv').config();
 
 const cheerio = require('cheerio');
 const Anthropic = require('@anthropic-ai/sdk');
-const { isRelevant, CORE_KEYWORDS } = require('./keywords.js');
 const { makeSupabaseClient, entryExists } = require('./dedup.js');
 
 const DEFAULT_LOOKBACK_DAYS = 60;
@@ -201,7 +200,7 @@ async function main() {
 
   const supabase = makeSupabaseClient();
   console.log(
-    `Config: lookback=${LOOKBACK_DAYS}d apiBase=${apiBase} precheck=${supabase ? 'on' : 'off'} keywords=[${CORE_KEYWORDS.slice(0, 4).join(', ')}, ...]`,
+    `Config: lookback=${LOOKBACK_DAYS}d apiBase=${apiBase} precheck=${supabase ? 'on' : 'off'}`,
   );
 
   const anthropic = new Anthropic({ apiKey: anthropicKey });
@@ -209,7 +208,6 @@ async function main() {
   console.log(`Checking ${issues.length} IRB issues within ${LOOKBACK_DAYS}-day window`);
 
   let totalFetched = 0;
-  let keywordPassed = 0;
   let processed = 0;
   let created = 0;
   let alreadyStored = 0;
@@ -222,11 +220,10 @@ async function main() {
     console.log(`  -> ${items.length} citations found`);
     totalFetched += items.length;
 
+    // No keyword pre-filter on IRB. The synopsis section produces ~125
+    // clean citations across a 365-day backfill; cheap enough to send
+    // every one to Claude after the entryExists() dedup check.
     for (const item of items) {
-      const combined = `${item.citation} ${item.synopsis}`;
-      if (!isRelevant(combined)) continue;
-      keywordPassed++;
-
       if (await entryExists(supabase, item.url)) {
         console.log(`    SKIP (already stored): ${item.citation}`);
         alreadyStored++;
@@ -280,7 +277,7 @@ async function main() {
   }
 
   console.log(
-    `\nDone. Fetched: ${totalFetched}. Keyword-passed: ${keywordPassed}. Processed: ${processed}. Created/updated: ${created}. Already-stored: ${alreadyStored}. Irrelevant (claude): ${irrelevant}. Failed: ${failed}.`,
+    `\nDone. Fetched: ${totalFetched}. Processed: ${processed}. Created/updated: ${created}. Already-stored: ${alreadyStored}. Irrelevant (claude): ${irrelevant}. Failed: ${failed}.`,
   );
 }
 

@@ -6,24 +6,52 @@ const Anthropic = require('@anthropic-ai/sdk');
 const { isRelevant: isTopical, CORE_KEYWORDS } = require('./keywords.js');
 
 // RSS candidates tried in order. The first one that parses with >0 items wins.
-// If all fail we fall back to HTML scraping of the Newsroom index.
+// We always *also* scrape the monthly HTML archive pages (below) so a single
+// run sees roughly the past IRS_LOOKBACK_DAYS of releases, not just whatever
+// the RSS tail covers.
 const RSS_CANDIDATES = [
   'https://www.irs.gov/rss/newsroom.xml',
   'https://www.irs.gov/newsroom/feed',
 ];
-const HTML_INDEX = 'https://www.irs.gov/newsroom/news-releases-for-current-month';
-const HTML_INDEX_FALLBACK = 'https://www.irs.gov/newsroom';
+// IRS news releases are organized into per-month archive pages; we walk back
+// month-by-month across the lookback window. The current-month canonical
+// URL is always included as the first candidate.
+const IRS_LOOKBACK_DAYS = 90;
+const CURRENT_MONTH_URL = 'https://www.irs.gov/newsroom/news-releases-for-current-month';
+const NEWSROOM_FALLBACK = 'https://www.irs.gov/newsroom';
 const UA =
   'Mozilla/5.0 (compatible; ForgePointSignal/1.0; +https://forgepointsignal.com)';
 // Hard cap so a flood of matched items can't blow the workflow timeout.
 // Items are pre-sorted newest-first by RSS / index page; we keep the
 // first MAX_ARTICLES after keyword filtering and skip the rest.
 const MAX_ARTICLES = 10;
-// Per-fetch timeout for article body retrieval. A slow IRS response on a
-// single article shouldn't stall the whole run.
+// Per-fetch timeout for HTTP retrievals (archive index pages and article
+// bodies). A single slow IRS response shouldn't stall the whole run.
 const FETCH_TIMEOUT_MS = 5000;
 
 const parser = new Parser({ timeout: 20000, headers: { 'User-Agent': UA } });
+
+// Build the list of monthly archive URLs covering the lookback window.
+// Pattern: /newsroom/news-releases-for-{month-name}-{year}, e.g.
+// /newsroom/news-releases-for-january-2026. URLs that don't exist 404
+// and are skipped with a log line — no error.
+function monthlyArchiveUrls(lookbackDays = IRS_LOOKBACK_DAYS) {
+  const urls = [CURRENT_MONTH_URL];
+  const now = new Date();
+  const months = Math.ceil(lookbackDays / 30) + 1;
+  for (let i = 0; i < months; i++) {
+    const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - i, 1));
+    const monthName = d
+      .toLocaleString('en-US', { month: 'long', timeZone: 'UTC' })
+      .toLowerCase();
+    const year = d.getUTCFullYear();
+    urls.push(`https://www.irs.gov/newsroom/news-releases-for-${monthName}-${year}`);
+  }
+  // Last-resort: the newsroom root, in case the per-month URL pattern
+  // changes upstream and we'd otherwise return zero items.
+  urls.push(NEWSROOM_FALLBACK);
+  return [...new Set(urls)];
+}
 
 // Topical filter — defers to the shared CORE_KEYWORDS list so the
 // Federal Register and IRS pipelines stay in lockstep.
@@ -160,24 +188,52 @@ async function fetchArticleContent(url) {
 }
 
 async function loadItems() {
+  const merged = new Map(); // article URL -> item
+  let rssWon = null;
+
+  // RSS first — gives content snippets for free; useful for fresh recent items.
   for (const url of RSS_CANDIDATES) {
     const rss = await tryRss(url);
     if (rss && rss.length > 0) {
-      return { sourceKind: 'rss', sourceUrl: url, items: rss };
+      rssWon = url;
+      for (const it of rss) {
+        if (it.link) merged.set(it.link, it);
+      }
+      break;
     }
   }
-  console.log('  All RSS candidates failed or empty. Falling back to HTML scrape.');
-  for (const indexUrl of [HTML_INDEX, HTML_INDEX_FALLBACK]) {
+  if (!rssWon) {
+    console.log('  No RSS feed responded; relying on HTML archive scrape only.');
+  }
+
+  // Monthly archive scrape — covers the full IRS_LOOKBACK_DAYS window.
+  const archiveUrls = monthlyArchiveUrls();
+  console.log(
+    `  HTML archive scrape across ${archiveUrls.length} pages (lookback=${IRS_LOOKBACK_DAYS}d)`,
+  );
+  let archivePagesOk = 0;
+  for (const url of archiveUrls) {
     try {
-      const items = await scrapeIndex(indexUrl);
-      if (items.length > 0) {
-        return { sourceKind: 'html', sourceUrl: indexUrl, items };
+      const items = await scrapeIndex(url);
+      archivePagesOk += items.length > 0 ? 1 : 0;
+      for (const it of items) {
+        if (it.link && !merged.has(it.link)) merged.set(it.link, it);
       }
     } catch (err) {
-      console.log(`  HTML scrape failed for ${indexUrl}: ${err.message}`);
+      console.log(`    archive ${url} failed: ${err.message}`);
     }
   }
-  throw new Error('No items available from RSS or HTML sources.');
+
+  if (merged.size === 0) {
+    throw new Error('No items available from RSS or HTML archive sources.');
+  }
+
+  return {
+    sourceKind: rssWon && archivePagesOk > 0 ? 'rss+html' : rssWon ? 'rss' : 'html',
+    sourceUrl: rssWon || archiveUrls[0],
+    items: [...merged.values()],
+    archivePagesOk,
+  };
 }
 
 const EXTRACT_SYSTEM = `You classify and extract metadata from IRS Newsroom items for an audience of estate planners, trust attorneys, and family-office advisors.
@@ -292,16 +348,22 @@ async function main() {
     `Loading IRS items (keywords: ${CORE_KEYWORDS.slice(0, 8).join(', ')}, ...)`,
   );
 
-  const { sourceKind, sourceUrl, items } = await loadItems();
-  console.log(`Source: kind=${sourceKind} url=${sourceUrl} items=${items.length}`);
+  const { sourceKind, sourceUrl, items, archivePagesOk } = await loadItems();
+  console.log(
+    `Source: kind=${sourceKind} url=${sourceUrl} items=${items.length} archive_pages_ok=${archivePagesOk ?? 0}`,
+  );
   if (items.length > 0) {
     console.log(
       `  first: "${(items[0].title || '').slice(0, 70)}" pub=${items[0].pubDate || '?'}`,
     );
   }
 
-  const matched = items.filter((it) => matches(it.title, it.content));
-  console.log(`Matched ${matched.length}/${items.length} by keywords.`);
+  // Title-only keyword filter, run BEFORE any per-article body fetch so we
+  // never spend bandwidth on articles whose title is obviously off-topic.
+  // The Claude relevance gate later re-checks against the body for items
+  // that pass the title filter.
+  const matched = items.filter((it) => matches(it.title));
+  console.log(`Title-matched ${matched.length}/${items.length} by keywords.`);
   if (matched.length === 0) {
     console.log('No matching items. Done.');
     return;
@@ -328,9 +390,10 @@ async function main() {
     }
     console.log(`\nProcessing: "${item.title.slice(0, 70)}"`);
 
-    // For HTML-scraped items we only have the link at this point —
-    // fetch the article body so Claude has something to summarize.
-    if (!item.content && sourceKind === 'html') {
+    // RSS items already carry a content snippet; HTML-scraped items don't,
+    // so fetch the article body for Claude to read. Either way we only do
+    // this for items that already passed the title-only keyword filter.
+    if (!item.content) {
       try {
         item.content = await fetchArticleContent(item.link);
         console.log(`    fetched article: ${item.content.length} chars`);

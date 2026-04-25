@@ -105,9 +105,32 @@ async function parseIssue(issueUrl) {
       seen.add(citation);
 
       const wrapper = $(el).closest('li, p, dt, dd, tr, section, div');
-      const synopsis = wrapper.length
-        ? wrapper.text().replace(/\s+/g, ' ').trim().slice(0, 800)
-        : text.replace(/\s+/g, ' ').trim().slice(0, 800);
+      let synopsis = wrapper.length
+        ? wrapper.text().replace(/\s+/g, ' ').trim()
+        : text.replace(/\s+/g, ' ').trim();
+
+      // IRB synopsis sections often place the citation in one block and
+      // its 1-2 sentence description in the next block (typical pattern:
+      // <p>Rev. Rul. 2026-08</p><p>Announces interest rates for Q2 2026.</p>).
+      // If we only captured the citation block itself, walk forward to
+      // pick up the description so Claude has enough context to evaluate.
+      // Stop walking if the next block starts a new citation — otherwise
+      // we'd pollute this entry's synopsis with the next item's text.
+      const NEXT_CITATION = /\b(Rev\.\s*Rul\.|Rev\.\s*Proc\.|Notice|Ann\.)\s+\d{4}-\d+/i;
+      if (synopsis.length < 100 && wrapper.length) {
+        let cursor = wrapper.next();
+        let hops = 0;
+        while (cursor.length && synopsis.length < 400 && hops < 3) {
+          const extra = cursor.text().replace(/\s+/g, ' ').trim();
+          if (extra) {
+            if (NEXT_CITATION.test(extra)) break;
+            synopsis = `${synopsis} ${extra}`.trim();
+          }
+          cursor = cursor.next();
+          hops++;
+        }
+      }
+      synopsis = synopsis.slice(0, 800);
 
       const anc = tag === 'a' ? $(el) : $(el).find('a').first();
       const href = anc.attr('href') || '';
@@ -211,6 +234,7 @@ async function main() {
   let processed = 0;
   let created = 0;
   let alreadyStored = 0;
+  let noSynopsis = 0;
   let irrelevant = 0;
   let failed = 0;
 
@@ -227,6 +251,19 @@ async function main() {
       if (await entryExists(supabase, item.url)) {
         console.log(`    SKIP (already stored): ${item.citation}`);
         alreadyStored++;
+        continue;
+      }
+
+      // Sending Claude a near-empty synopsis (just "Rev. Rul. 2026-08"
+      // and nothing else) returns an "I don't have enough context"
+      // refusal, which fails our JSON parse and lands as FAIL claude.
+      // Skip those locally rather than burning a Claude call.
+      const synopsisLen = (item.synopsis || '').trim().length;
+      if (synopsisLen < 20) {
+        console.log(
+          `    SKIP (no synopsis, ${synopsisLen} chars): ${item.citation}`,
+        );
+        noSynopsis++;
         continue;
       }
 
@@ -277,7 +314,7 @@ async function main() {
   }
 
   console.log(
-    `\nDone. Fetched: ${totalFetched}. Processed: ${processed}. Created/updated: ${created}. Already-stored: ${alreadyStored}. Irrelevant (claude): ${irrelevant}. Failed: ${failed}.`,
+    `\nDone. Fetched: ${totalFetched}. Processed: ${processed}. Created/updated: ${created}. Already-stored: ${alreadyStored}. No-synopsis: ${noSynopsis}. Irrelevant (claude): ${irrelevant}. Failed: ${failed}.`,
   );
 }
 

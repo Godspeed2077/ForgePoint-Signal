@@ -4,6 +4,7 @@ const Parser = require('rss-parser');
 const cheerio = require('cheerio');
 const Anthropic = require('@anthropic-ai/sdk');
 const { isRelevant: isTopical, CORE_KEYWORDS } = require('./keywords.js');
+const { makeSupabaseClient, entryExists } = require('./dedup.js');
 
 // RSS candidates tried in order. The first one that parses with >0 items wins.
 // We always *also* scrape the monthly HTML archive pages (below) so a single
@@ -25,9 +26,14 @@ const UA =
 // Items are pre-sorted newest-first by RSS / index page; we keep the
 // first MAX_ARTICLES after keyword filtering and skip the rest.
 const MAX_ARTICLES = 10;
-// Per-fetch timeout for HTTP retrievals (archive index pages and article
-// bodies). A single slow IRS response shouldn't stall the whole run.
+// Per-fetch timeout for HTTP retrievals (archive index pages, article
+// bodies, and POST /entries). A single slow IRS or API response shouldn't
+// stall the whole run.
 const FETCH_TIMEOUT_MS = 5000;
+// Hard wall-clock cap on each Claude call. If Claude hasn't responded in
+// this many ms we abort the request, log FAIL, and move to the next item.
+// maxRetries=0 below ensures one attempt only.
+const CLAUDE_TIMEOUT_MS = 10000;
 
 const parser = new Parser({ timeout: 20000, headers: { 'User-Agent': UA } });
 
@@ -82,6 +88,26 @@ async function httpGet(url, timeoutMs = FETCH_TIMEOUT_MS) {
   } catch (err) {
     if (err.name === 'AbortError') {
       throw new Error(`GET ${url} timed out after ${timeoutMs}ms`);
+    }
+    throw err;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+// Generic fetch wrapper with a hard wall-clock timeout. Used by postEntry
+// (and could be used elsewhere). Caller does .json() / .text() on the
+// returned Response.
+async function fetchWithTimeout(url, options = {}, timeoutMs = FETCH_TIMEOUT_MS) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } catch (err) {
+    if (err.name === 'AbortError') {
+      throw new Error(
+        `${(options && options.method) || 'GET'} ${url} timed out after ${timeoutMs}ms`,
+      );
     }
     throw err;
   } finally {
@@ -294,29 +320,43 @@ function parseExtraction(text) {
 }
 
 async function extractWithClaude(client, item) {
-  const response = await client.messages.create({
-    model: 'claude-haiku-4-5-20251001',
-    max_tokens: 1024,
-    system: [
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), CLAUDE_TIMEOUT_MS);
+  try {
+    const response = await client.messages.create(
       {
-        type: 'text',
-        text: EXTRACT_SYSTEM,
-        cache_control: { type: 'ephemeral' },
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 1024,
+        system: [
+          {
+            type: 'text',
+            text: EXTRACT_SYSTEM,
+            cache_control: { type: 'ephemeral' },
+          },
+        ],
+        messages: [{ role: 'user', content: buildUserPrompt(item) }],
       },
-    ],
-    messages: [{ role: 'user', content: buildUserPrompt(item) }],
-  });
-  const textBlock = response.content.find((b) => b.type === 'text');
-  if (!textBlock) throw new Error('No text block in Claude response');
-  console.log(
-    `    claude raw (${textBlock.text.length} chars): ${textBlock.text.replace(/\s+/g, ' ').slice(0, 200)}`,
-  );
-  return parseExtraction(textBlock.text);
+      { signal: controller.signal, maxRetries: 0 },
+    );
+    const textBlock = response.content.find((b) => b.type === 'text');
+    if (!textBlock) throw new Error('No text block in Claude response');
+    console.log(
+      `    claude raw (${textBlock.text.length} chars): ${textBlock.text.replace(/\s+/g, ' ').slice(0, 200)}`,
+    );
+    return parseExtraction(textBlock.text);
+  } catch (err) {
+    if (err.name === 'AbortError' || /aborted|abort/i.test(err.message || '')) {
+      throw new Error(`Claude call timed out after ${CLAUDE_TIMEOUT_MS}ms`);
+    }
+    throw err;
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 async function postEntry(apiBase, apiKey, entry) {
   const url = `${apiBase.replace(/\/+$/, '')}/entries`;
-  const res = await fetch(url, {
+  const res = await fetchWithTimeout(url, {
     method: 'POST',
     headers: {
       'content-type': 'application/json',
@@ -342,8 +382,9 @@ async function main() {
   if (!anthropicKey) throw new Error('ANTHROPIC_API_KEY is required');
 
   const client = new Anthropic({ apiKey: anthropicKey });
+  const supabase = makeSupabaseClient();
 
-  console.log(`Config: apiBase=${apiBase}`);
+  console.log(`Config: apiBase=${apiBase} precheck=${supabase ? 'on' : 'off'}`);
   console.log(
     `Loading IRS items (keywords: ${CORE_KEYWORDS.slice(0, 8).join(', ')}, ...)`,
   );
@@ -380,6 +421,7 @@ async function main() {
 
   let created = 0;
   let skipped = 0;
+  let alreadyStored = 0;
   let failed = 0;
 
   for (const item of processList) {
@@ -390,9 +432,18 @@ async function main() {
     }
     console.log(`\nProcessing: "${item.title.slice(0, 70)}"`);
 
+    // Pre-check: skip Claude AND the article body fetch if this source_url
+    // is already in regulatory_entries.
+    if (await entryExists(supabase, item.link)) {
+      alreadyStored += 1;
+      console.log(`    SKIP (already stored: ${item.link})`);
+      continue;
+    }
+
     // RSS items already carry a content snippet; HTML-scraped items don't,
     // so fetch the article body for Claude to read. Either way we only do
-    // this for items that already passed the title-only keyword filter.
+    // this for items that already passed the title-only keyword filter and
+    // the already-stored pre-check.
     if (!item.content) {
       try {
         item.content = await fetchArticleContent(item.link);
@@ -446,7 +497,7 @@ async function main() {
   }
 
   console.log(
-    `\nDone. Source=${sourceKind}. Matched: ${matched.length}. Processed: ${processList.length}. Created/updated: ${created}. Skipped: ${skipped}. Failed: ${failed}.`,
+    `\nDone. Source=${sourceKind}. Matched: ${matched.length}. Processed: ${processList.length}. Created/updated: ${created}. Already-stored: ${alreadyStored}. Skipped: ${skipped}. Failed: ${failed}.`,
   );
 }
 

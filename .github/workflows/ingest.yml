@@ -32,6 +32,11 @@ jobs:
           FORGEPOINT_API_URL: ${{ secrets.FORGEPOINT_API_URL }}
           INGEST_API_KEY: ${{ secrets.INGEST_API_KEY }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          # Used by scripts/dedup.js to skip already-stored source_urls
+          # before sending them to Claude. Anon key is sufficient (the
+          # regulatory_entries read policy permits it).
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
           LOOKBACK_DAYS: ${{ inputs.lookback_days || '' }}
 
       # Run IRS ingest even if the Federal Register step failed, so a single
@@ -43,3 +48,5 @@ jobs:
           FORGEPOINT_API_URL: ${{ secrets.FORGEPOINT_API_URL }}
           INGEST_API_KEY: ${{ secrets.INGEST_API_KEY }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}

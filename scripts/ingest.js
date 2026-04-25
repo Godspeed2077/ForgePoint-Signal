@@ -2,6 +2,7 @@ require('dotenv').config();
 
 const Anthropic = require('@anthropic-ai/sdk');
 const { isRelevant, CORE_KEYWORDS } = require('./keywords.js');
+const { makeSupabaseClient, entryExists } = require('./dedup.js');
 
 const FEDERAL_REGISTER_ENDPOINT = 'https://www.federalregister.gov/api/v1/documents.json';
 // Default lookback window. Bumped to 90 days for the initial backfill;
@@ -260,8 +261,9 @@ async function main() {
   const since = daysAgo(lookback);
 
   const client = new Anthropic({ apiKey: anthropicKey });
+  const supabase = makeSupabaseClient();
 
-  console.log(`Config: apiBase=${apiBase} lookback=${lookback}d since=${since} terms=${JSON.stringify(SEARCH_TERMS)} agencies=none`);
+  console.log(`Config: apiBase=${apiBase} lookback=${lookback}d since=${since} terms=${JSON.stringify(SEARCH_TERMS)} agencies=none precheck=${supabase ? 'on' : 'off'}`);
   console.log(`Fetching Federal Register documents since ${since}...`);
   await broadProbe(since);
   const batches = await Promise.all(SEARCH_TERMS.map((term) => fetchFederalRegister(term, since)));
@@ -295,6 +297,7 @@ async function main() {
   let created = 0;
   let failed = 0;
   let skipped = 0;
+  let alreadyStored = 0;
   let irrelevant = 0;
   for (const doc of processList) {
     if (!doc.html_url || !doc.title) {
@@ -303,6 +306,13 @@ async function main() {
       continue;
     }
     console.log(`\nProcessing ${doc.document_number}: "${doc.title.slice(0, 70)}"`);
+    // Pre-check: skip Claude entirely if this source_url is already in
+    // regulatory_entries. Saves the LLM call on every re-run.
+    if (await entryExists(supabase, doc.html_url)) {
+      alreadyStored += 1;
+      console.log(`    SKIP (already stored: ${doc.html_url})`);
+      continue;
+    }
     try {
       const extracted = await extractWithClaude(client, doc);
       // Layer 3: Claude relevance gate. If Claude reads the abstract and
@@ -341,7 +351,7 @@ async function main() {
   }
 
   console.log(
-    `\nDone. Fetched: ${fetched.length}. Keyword-passed: ${docs.length}. Processed: ${processList.length}. Created/updated: ${created}. Irrelevant (claude): ${irrelevant}. Skipped: ${skipped}. Failed: ${failed}.`,
+    `\nDone. Fetched: ${fetched.length}. Keyword-passed: ${docs.length}. Processed: ${processList.length}. Created/updated: ${created}. Already-stored: ${alreadyStored}. Irrelevant (claude): ${irrelevant}. Skipped: ${skipped}. Failed: ${failed}.`,
   );
 }
 

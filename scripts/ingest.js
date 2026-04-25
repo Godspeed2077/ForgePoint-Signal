@@ -11,6 +11,17 @@ const FEDERAL_REGISTER_ENDPOINT = 'https://www.federalregister.gov/api/v1/docume
 const DEFAULT_LOOKBACK_DAYS = 90;
 const PER_PAGE = 100;
 const SEARCH_TERMS = ['estate tax', 'gift tax'];
+// Hard cap so the run finishes inside the workflow timeout. Items are
+// pre-sorted newest-first by the FR API; we keep the first MAX_DOCS
+// after keyword filtering and skip the rest.
+const MAX_DOCS = 25;
+// Per-fetch timeout for HTTP calls (FR API + POST /entries). A single
+// slow response shouldn't stall the whole run.
+const FETCH_TIMEOUT_MS = 5000;
+// Hard wall-clock cap on each Claude call. If Claude hasn't responded
+// in this many ms we abort the request, log FAIL, and move to the next
+// document. maxRetries=0 below ensures one attempt only.
+const CLAUDE_TIMEOUT_MS = 10000;
 
 // Agency filter has been removed. With agency slugs like
 // 'labor-department' or 'securities-and-exchange-commission' the
@@ -48,6 +59,24 @@ function daysAgo(n) {
   return d.toISOString().slice(0, 10);
 }
 
+// fetch wrapper with hard wall-clock timeout. Aborts on the wire if the
+// remote takes longer than timeoutMs. Caller still does .json()/.text()
+// on the returned Response.
+async function fetchWithTimeout(url, options = {}, timeoutMs = FETCH_TIMEOUT_MS) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } catch (err) {
+    if (err.name === 'AbortError') {
+      throw new Error(`${(options && options.method) || 'GET'} ${url} timed out after ${timeoutMs}ms`);
+    }
+    throw err;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 async function fetchFederalRegister(term, since) {
   const params = new URLSearchParams();
   params.set('per_page', String(PER_PAGE));
@@ -58,7 +87,7 @@ async function fetchFederalRegister(term, since) {
 
   const url = `${FEDERAL_REGISTER_ENDPOINT}?${params.toString()}`;
   console.log(`  GET ${url}`);
-  const res = await fetch(url);
+  const res = await fetchWithTimeout(url);
   if (!res.ok) {
     throw new Error(`Federal Register API ${res.status}: ${await res.text()}`);
   }
@@ -84,7 +113,7 @@ async function broadProbe(since) {
   const url = `${FEDERAL_REGISTER_ENDPOINT}?${params.toString()}`;
   console.log(`  PROBE ${url}`);
   try {
-    const res = await fetch(url);
+    const res = await fetchWithTimeout(url);
     if (!res.ok) {
       console.warn(`    probe failed: HTTP ${res.status}`);
       return;
@@ -168,28 +197,41 @@ function parseExtraction(text) {
 }
 
 async function extractWithClaude(client, doc) {
-  const response = await client.messages.create({
-    model: 'claude-haiku-4-5-20251001',
-    max_tokens: 1024,
-    system: [
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), CLAUDE_TIMEOUT_MS);
+  try {
+    const response = await client.messages.create(
       {
-        type: 'text',
-        text: EXTRACT_SYSTEM,
-        cache_control: { type: 'ephemeral' },
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 1024,
+        system: [
+          {
+            type: 'text',
+            text: EXTRACT_SYSTEM,
+            cache_control: { type: 'ephemeral' },
+          },
+        ],
+        messages: [{ role: 'user', content: buildUserPrompt(doc) }],
       },
-    ],
-    messages: [{ role: 'user', content: buildUserPrompt(doc) }],
-  });
-
-  const textBlock = response.content.find((b) => b.type === 'text');
-  if (!textBlock) throw new Error('No text block in Claude response');
-  console.log(`    claude raw (${textBlock.text.length} chars): ${textBlock.text.replace(/\s+/g, ' ').slice(0, 200)}`);
-  return parseExtraction(textBlock.text);
+      { signal: controller.signal, maxRetries: 0 },
+    );
+    const textBlock = response.content.find((b) => b.type === 'text');
+    if (!textBlock) throw new Error('No text block in Claude response');
+    console.log(`    claude raw (${textBlock.text.length} chars): ${textBlock.text.replace(/\s+/g, ' ').slice(0, 200)}`);
+    return parseExtraction(textBlock.text);
+  } catch (err) {
+    if (err.name === 'AbortError' || /aborted|abort/i.test(err.message || '')) {
+      throw new Error(`Claude call timed out after ${CLAUDE_TIMEOUT_MS}ms`);
+    }
+    throw err;
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 async function postEntry(apiBase, apiKey, entry) {
   const url = `${apiBase.replace(/\/+$/, '')}/entries`;
-  const res = await fetch(url, {
+  const res = await fetchWithTimeout(url, {
     method: 'POST',
     headers: {
       'content-type': 'application/json',
@@ -239,11 +281,22 @@ async function main() {
     return;
   }
 
+  // Hard cap so the run finishes inside the workflow timeout. Docs are
+  // pre-sorted newest-first by the FR API; we keep the first MAX_DOCS
+  // and defer the rest.
+  let processList = docs;
+  if (docs.length > MAX_DOCS) {
+    console.log(
+      `Capping at MAX_DOCS=${MAX_DOCS} (matched ${docs.length}); processing newest ${MAX_DOCS}`,
+    );
+    processList = docs.slice(0, MAX_DOCS);
+  }
+
   let created = 0;
   let failed = 0;
   let skipped = 0;
   let irrelevant = 0;
-  for (const doc of docs) {
+  for (const doc of processList) {
     if (!doc.html_url || !doc.title) {
       skipped += 1;
       console.log(`  SKIP ${doc.document_number}: missing html_url or title`);
@@ -288,7 +341,7 @@ async function main() {
   }
 
   console.log(
-    `\nDone. Fetched: ${fetched.length}. Keyword-passed: ${docs.length}. Created/updated: ${created}. Irrelevant (claude): ${irrelevant}. Skipped: ${skipped}. Failed: ${failed}.`,
+    `\nDone. Fetched: ${fetched.length}. Keyword-passed: ${docs.length}. Processed: ${processList.length}. Created/updated: ${created}. Irrelevant (claude): ${irrelevant}. Skipped: ${skipped}. Failed: ${failed}.`,
   );
 }
 

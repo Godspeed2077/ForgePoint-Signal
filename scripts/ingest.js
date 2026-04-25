@@ -4,7 +4,11 @@ const Anthropic = require('@anthropic-ai/sdk');
 const { isRelevant, CORE_KEYWORDS } = require('./keywords.js');
 
 const FEDERAL_REGISTER_ENDPOINT = 'https://www.federalregister.gov/api/v1/documents.json';
-const DEFAULT_LOOKBACK_DAYS = 30;
+// Default lookback window. Bumped to 90 days for the initial backfill;
+// drop back to 7 once daily incremental ingest is steady-state. Override
+// at runtime via the LOOKBACK_DAYS env var (the workflow exposes this as
+// a workflow_dispatch input).
+const DEFAULT_LOOKBACK_DAYS = 90;
 const PER_PAGE = 100;
 const SEARCH_TERMS = ['estate tax', 'gift tax'];
 

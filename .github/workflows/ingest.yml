@@ -50,3 +50,19 @@ jobs:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+
+      # Internal Revenue Bulletin (IRB): walks weekly issue pages backwards
+      # across the lookback window, parses out Rev. Rul. / Rev. Proc. /
+      # Notice / Ann. citations from the page HTML, and Claude-evaluates
+      # each match against the estate / gift / GST / trust planning lens.
+      # Same if: always() so it runs independently of the prior steps.
+      - name: IRS Internal Revenue Bulletin
+        if: always()
+        run: npm run ingest:irb
+        env:
+          FORGEPOINT_API_URL: ${{ secrets.FORGEPOINT_API_URL }}
+          INGEST_API_KEY: ${{ secrets.INGEST_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          LOOKBACK_DAYS: ${{ inputs.lookback_days || '' }}

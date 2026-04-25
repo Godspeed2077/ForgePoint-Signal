@@ -9,6 +9,7 @@
     "dev": "node server.js",
     "ingest": "node scripts/ingest.js",
     "ingest:irs": "node scripts/ingest-irs.js",
+    "ingest:irb": "node scripts/ingest-irb.js",
     "cleanup:off-topic": "node scripts/cleanup-off-topic.js"
   },
   "engines": {

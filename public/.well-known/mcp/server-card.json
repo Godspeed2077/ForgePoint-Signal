@@ -5,7 +5,7 @@
     "name": "forgepoint-signal",
     "title": "ForgePoint Signal",
     "version": "1.0.0",
-    "description": "Daily regulatory monitoring for US estate, trust, and tax law changes. MCP-native with x402 micropayment support. Updated daily from the Federal Register and IRS Newsroom.",
+    "description": "Daily regulatory monitoring for US estate, trust, and tax law changes. MCP-native with x402 micropayment support. Updated daily from the Federal Register and IRS Internal Revenue Bulletin.",
     "vendor": "ForgePoint Industries",
     "homepage": "https://forgepointsignal.com",
     "documentation": "https://forgepointsignal.com/llms.txt"
@@ -23,7 +23,7 @@
   "tools": [
     {
       "name": "preview_regulations",
-      "description": "Get a free preview of the 5 most recent US regulatory changes monitored by ForgePoint Signal. Covers estate, trust, gift, and inheritance tax law. Updated daily from the Federal Register and IRS Newsroom.",
+      "description": "Get a free preview of the 5 most recent US regulatory changes monitored by ForgePoint Signal. Covers estate, trust, gift, and inheritance tax law. Updated daily from the Federal Register and IRS Internal Revenue Bulletin.",
       "inputSchema": {
         "type": "object",
         "properties": {}
@@ -31,7 +31,7 @@
     },
     {
       "name": "search_regulations",
-      "description": "Search the full ForgePoint Signal regulatory database by keyword, jurisdiction (federal/state), category (estates/trusts/tax/gift), or impact level (low/medium/high). Returns full entries with plain-English summaries and source links. Updated daily from the Federal Register and IRS Newsroom.",
+      "description": "Search the full ForgePoint Signal regulatory database by keyword, jurisdiction (federal/state), category (estates/trusts/tax/gift), or impact level (low/medium/high). Returns full entries with plain-English summaries and source links. Updated daily from the Federal Register and IRS Internal Revenue Bulletin.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -45,7 +45,7 @@
     },
     {
       "name": "get_regulation_detail",
-      "description": "Get complete detail for a specific regulation entry including full summary, affected law or code section, effective date, and source document link. Data is sourced from the Federal Register and IRS Newsroom.",
+      "description": "Get complete detail for a specific regulation entry including full summary, affected law or code section, effective date, and source document link. Data is sourced from the Federal Register and IRS Internal Revenue Bulletin.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -56,7 +56,7 @@
     },
     {
       "name": "get_recent_by_impact",
-      "description": "Get the most recent high-impact regulatory changes sorted by impact level. Ideal for daily briefings or monitoring material changes requiring immediate attention. Updated daily from the Federal Register and IRS Newsroom.",
+      "description": "Get the most recent high-impact regulatory changes sorted by impact level. Ideal for daily briefings or monitoring material changes requiring immediate attention. Updated daily from the Federal Register and IRS Internal Revenue Bulletin.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -77,5 +77,5 @@
       "get_recent_by_impact"
     ]
   },
-  "data_sources": ["federal-register", "irs-newsroom"]
+  "data_sources": ["federal-register", "irs-internal-revenue-bulletin"]
 }

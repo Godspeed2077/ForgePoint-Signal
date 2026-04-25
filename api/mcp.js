@@ -26,7 +26,7 @@ function buildServer(supabase) {
 
   server.tool(
     'preview_regulations',
-    "Get a free preview of the 5 most recent US regulatory changes monitored by ForgePoint Signal. Covers estate, trust, gift, and inheritance tax law. Updated daily from the Federal Register and IRS Newsroom.",
+    "Get a free preview of the 5 most recent US regulatory changes monitored by ForgePoint Signal. Covers estate, trust, gift, and inheritance tax law. Updated daily from the Federal Register and IRS Internal Revenue Bulletin.",
     {},
     async () => {
       const { data, error } = await supabase
@@ -51,7 +51,7 @@ function buildServer(supabase) {
 
   server.tool(
     'search_regulations',
-    "Search the full ForgePoint Signal regulatory database by keyword, jurisdiction (federal/state), category (estates/trusts/tax/gift), or impact level (low/medium/high). Returns full entries with plain-English summaries and source links. Updated daily from the Federal Register and IRS Newsroom.",
+    "Search the full ForgePoint Signal regulatory database by keyword, jurisdiction (federal/state), category (estates/trusts/tax/gift), or impact level (low/medium/high). Returns full entries with plain-English summaries and source links. Updated daily from the Federal Register and IRS Internal Revenue Bulletin.",
     {
       query: z.string().optional(),
       jurisdiction: z.string().optional(),
@@ -84,7 +84,7 @@ function buildServer(supabase) {
 
   server.tool(
     'get_regulation_detail',
-    "Get complete detail for a specific regulation entry including full summary, affected law or code section, effective date, and source document link. Data is sourced from the Federal Register and IRS Newsroom.",
+    "Get complete detail for a specific regulation entry including full summary, affected law or code section, effective date, and source document link. Data is sourced from the Federal Register and IRS Internal Revenue Bulletin.",
     { entry_id: z.string() },
     async ({ entry_id }) => {
       const { data, error } = await supabase
@@ -105,7 +105,7 @@ function buildServer(supabase) {
 
   server.tool(
     'get_recent_by_impact',
-    "Get the most recent high-impact regulatory changes sorted by impact level. Ideal for daily briefings or monitoring material changes requiring immediate attention. Updated daily from the Federal Register and IRS Newsroom.",
+    "Get the most recent high-impact regulatory changes sorted by impact level. Ideal for daily briefings or monitoring material changes requiring immediate attention. Updated daily from the Federal Register and IRS Internal Revenue Bulletin.",
     {
       impact_level: z.enum(['low', 'medium', 'high']).optional(),
       limit: z.number().int().min(1).max(50).optional(),

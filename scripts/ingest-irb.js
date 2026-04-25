@@ -49,6 +49,28 @@ async function fetchWithTimeout(url, ms) {
   }
 }
 
+// Heading text that introduces a TOC section listing documents
+// PUBLISHED IN this issue. We restrict citation extraction to anchors
+// inside these sections, so historical cross-references in supersession
+// tables and footnotes elsewhere on the page don't leak into our feed.
+//
+// Headings are matched as the entire heading text (with flexible
+// whitespace + optional trailing punctuation), to avoid false positives
+// like "Notices to Practitioners" matching the "Notices" pattern.
+const TOC_HEADING_PATTERNS = [
+  /^\s*revenue\s+rulings?\s*[.:;]?\s*$/i,
+  /^\s*revenue\s+procedures?\s*[.:;]?\s*$/i,
+  /^\s*notices?\s*[.:;]?\s*$/i,
+  /^\s*announcements?\s*[.:;]?\s*$/i,
+  /^\s*treasury\s+decisions?\s*[.:;]?\s*$/i,
+  /^\s*proposed\s+regulations?\s*[.:;]?\s*$/i,
+];
+
+function isTocHeading(text) {
+  if (!text) return false;
+  return TOC_HEADING_PATTERNS.some((re) => re.test(text));
+}
+
 async function parseIssue(issueUrl) {
   let res;
   try {
@@ -63,24 +85,60 @@ async function parseIssue(issueUrl) {
   }
   const html = await res.text();
   const $ = cheerio.load(html);
+
   const items = [];
   const seen = new Set();
-  $('h2,h3,h4,p,li,a').each((_, el) => {
-    const tag = el.tagName.toLowerCase();
-    const text = $(el).text().trim();
-    CITATION_RE.lastIndex = 0;
-    let m;
-    while ((m = CITATION_RE.exec(text)) !== null) {
-      const citation = m[0].replace(/\s+/g, ' ').trim();
-      if (seen.has(citation)) continue;
+  let tocSectionsFound = 0;
+
+  // For each heading h1-h4 that names a TOC document-type section, take
+  // the contents up to the next heading at the same or higher level
+  // (cheerio's nextUntil) and pull citations only from anchor link text
+  // inside that bounded region. This filters out historical cross-refs
+  // like "supersedes Rev. Rul. 2002-10" that appear in footnotes or
+  // tables outside the TOC.
+  $('h1, h2, h3, h4').each((_, h) => {
+    if (!isTocHeading($(h).text())) return;
+    tocSectionsFound++;
+
+    const section = $(h).nextUntil('h1, h2, h3, h4');
+    section.find('a').each((_, a) => {
+      const text = $(a).text().trim();
+      if (!text) return;
+
+      CITATION_RE.lastIndex = 0;
+      const match = CITATION_RE.exec(text);
+      if (!match) return; // not a citation link (e.g., back-to-top, nav)
+      const citation = match[0].replace(/\s+/g, ' ').trim();
+      if (seen.has(citation)) return;
       seen.add(citation);
-      const blockText = $(el).closest('p,li,div,section').text().trim().slice(0, 800);
-      const anc = tag === 'a' ? $(el) : $(el).find('a').first();
-      const href = anc.attr('href') || '';
-      const docUrl = href ? (href.startsWith('http') ? href : `https://www.irs.gov${href}`) : issueUrl;
-      items.push({ citation, synopsis: blockText || text, url: docUrl, issueUrl });
-    }
+
+      const href = $(a).attr('href') || '';
+      const docUrl = href
+        ? href.startsWith('http')
+          ? href
+          : `https://www.irs.gov${href}`
+        : issueUrl;
+
+      // Synopsis: the text of the surrounding list item / row / paragraph
+      // — usually richer than the link text alone.
+      const wrapper = $(a).closest('li, dt, dd, tr, p');
+      const synopsis = wrapper.length
+        ? wrapper.text().replace(/\s+/g, ' ').trim().slice(0, 800)
+        : text;
+
+      items.push({ citation, synopsis, url: docUrl, issueUrl });
+    });
   });
+
+  if (tocSectionsFound === 0) {
+    console.log(
+      `  -> no TOC sections recognized (looked for headings matching: Revenue Rulings, Revenue Procedures, Notices, Announcements, Treasury Decisions, Proposed Regulations) — skipping page`,
+    );
+  } else {
+    console.log(
+      `  -> ${tocSectionsFound} TOC section(s) parsed, ${items.length} citations extracted`,
+    );
+  }
   return items;
 }
 

@@ -3,10 +3,10 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>ForgePoint Signal — Federal Estate & Gift Tax Intelligence</title>
+    <title>ForgePoint Signal — Live x402-Monetized MCP Server on Base Mainnet</title>
     <meta
       name="description"
-      content="Estate, gift, trust, and inheritance tax regulatory changes — monitored daily from the Federal Register and IRS Internal Revenue Bulletin, summarized for estate attorneys and financial advisors."
+      content="A working production proof of the monetized-MCP build pattern: cron + Claude parse + Supabase + MCP server + x402 micropayments on Base mainnet. Federal regulatory data, free to read here, $0.10 USDC per call for AI agents."
     />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -574,8 +574,8 @@
         </div>
         <nav id="site-nav">
           <a href="#feed">Updates</a>
-          <a href="#pricing">Pricing</a>
-          <a href="/checkout" class="cta-sm" id="nav-auth">Subscribe</a>
+          <a href="#connect">Connect</a>
+          <a href="https://github.com/Godspeed2077/ForgePoint-Signal" target="_blank" rel="noopener noreferrer" class="cta-sm" id="nav-auth">GitHub</a>
         </nav>
       </div>
     </header>
@@ -583,18 +583,18 @@
     <main>
       <section class="hero">
         <div class="container">
-          <span class="eyebrow">Federal Regulatory Intelligence</span>
-          <h1>Estate, gift, trust, and inheritance tax changes — the day they're published.</h1>
+          <span class="eyebrow">Live Production Proof</span>
+          <h1>A monetized MCP server on Base mainnet — running daily.</h1>
           <p class="tagline">
-            Every rulemaking, notice, and IRS release affecting estate,
-            gift, trust, and inheritance tax law — read, summarized, and
-            classified for estate attorneys and financial advisors. Monitored
-            daily from the Federal Register and IRS Internal Revenue Bulletin.
+            Federal regulatory updates, parsed by Claude, served over MCP,
+            with x402 micropayments wired in. Free to read here.
+            $0.10 USDC per call for AI agents. Built as a working reference
+            for the monetized-data-pipeline pattern — full source on GitHub.
           </p>
           <div class="trust-row">
             <span>Federal Register + IRS Internal Revenue Bulletin</span>
             <span>Updated every 24 hours</span>
-            <span>Cancel anytime</span>
+            <span>x402 on Base mainnet</span>
           </div>
         </div>
       </section>
@@ -606,6 +606,24 @@
             <div class="feed-meta" id="feed-meta"></div>
           </div>
           <div id="entries"></div>
+        </div>
+      </section>
+
+      <section class="connect" id="connect" style="border-top:1px solid var(--border); padding:64px 0;">
+        <div class="container">
+          <span class="eyebrow">Connect</span>
+          <h2 style="font-family:'Source Serif 4',Georgia,serif; font-size:32px; margin:8px 0 16px;">Three ways to use this</h2>
+          <p style="color:var(--text-muted); margin-bottom:32px;">This MCP server is live on Base mainnet. Pick the path that matches what you're here to do.</p>
+
+          <h3 style="font-size:18px; margin-top:28px; margin-bottom:8px;">For human readers</h3>
+          <p style="color:var(--text-muted); margin:0 0 8px;">Everything above is free. Browse the feed, click through to the original Federal Register or IRB source. No signup, no paywall.</p>
+
+          <h3 style="font-size:18px; margin-top:28px; margin-bottom:8px;">For AI agents</h3>
+          <p style="color:var(--text-muted); margin:0 0 12px;">Point any MCP client at <code style="background:var(--surface); padding:2px 6px; border-radius:4px; border:1px solid var(--border); font-size:13px;">https://forgepointsignal.com/mcp</code>. <code style="background:var(--surface); padding:2px 6px; border-radius:4px; border:1px solid var(--border); font-size:13px;">preview_regulations</code> is free; the rest are metered at $0.10 USDC on Base mainnet via x402 — no API keys, no signup, the payment is the auth.</p>
+          <pre style="background:var(--surface); border:1px solid var(--border); padding:16px; border-radius:8px; overflow-x:auto; font-size:13px; margin:12px 0 0; color:var(--text);"><code>{"mcpServers":{"forgepoint-signal":{"url":"https://forgepointsignal.com/mcp"}}}</code></pre>
+
+          <h3 style="font-size:18px; margin-top:28px; margin-bottom:8px;">For builders shipping a similar stack</h3>
+          <p style="color:var(--text-muted); margin:0;">Full source at <a href="https://github.com/Godspeed2077/ForgePoint-Signal" target="_blank" rel="noopener noreferrer">github.com/Godspeed2077/ForgePoint-Signal</a>. Build pattern writeup on <a href="https://dev.to/godspeed2077" target="_blank" rel="noopener noreferrer">dev.to</a>. If you're shipping cron + parse + MCP + x402 yourself and hit a wall, open a GitHub issue or DM me.</p>
         </div>
       </section>
     </main>
@@ -686,31 +704,9 @@
         </article>`;
       };
 
-      const paywallOverlay = `
-      <div class="paywall-overlay">
-        <div class="paywall-card">
-          <div class="paywall-icon">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="3" y="11" width="18" height="11" rx="2"/>
-              <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-            </svg>
-          </div>
-          <h3>Unlock the full archive</h3>
-          <p>Every regulatory update, searchable history, email alerts on high-impact changes, and exportable summaries.</p>
-          <a class="paywall-cta" href="${CHECKOUT_URL}">
-            Get Full Access <span class="price">· $199/month</span>
-          </a>
-          <div class="paywall-fine">Cancel anytime · Secure checkout by Stripe</div>
-          <form class="login-form" id="login-form" novalidate>
-            <label class="login-label" for="login-email">Already a subscriber?</label>
-            <div class="login-row">
-              <input type="email" id="login-email" name="email" required autocomplete="email" placeholder="you@firm.com" />
-              <button type="submit" id="login-submit">Email me a link</button>
-            </div>
-            <div class="login-msg" id="login-msg"></div>
-          </form>
-        </div>
-      </div>`;
+      // Paywall overlay removed — site repositioned as live build-pattern proof,
+      // not a subscription product. Stripe checkout endpoints in api/index.js
+      // remain functional but are no longer surfaced in the UI.
 
       function renderSignedInNav(email) {
         const nav = document.getElementById("site-nav");
@@ -814,24 +810,9 @@
           meta.textContent = `Most recent: ${fmtDate(latest)} · ${entries.length} shown`;
         }
 
-        if (isSubscriber) {
-          // Full list, no paywall.
-          root.innerHTML = entries.map((e) => renderEntry(e, false)).join("");
-          return;
-        }
-
-        const visible = entries.slice(0, FREE_LIMIT);
-        const locked = entries.slice(FREE_LIMIT, FREE_LIMIT + TEASER_LIMIT);
-        const visibleHtml = visible.map((e) => renderEntry(e, false)).join("");
-        const lockedHtml = locked.map((e) => renderEntry(e, true)).join("");
-
-        root.innerHTML =
-          visibleHtml +
-          (locked.length > 0
-            ? `<div class="paywall"><div class="paywall-stack">${lockedHtml}</div>${paywallOverlay}</div>`
-            : "");
-
-        attachLoginHandler();
+        // Free for all human readers — no paywall.
+        // The revenue path is x402 micropayments via the MCP endpoint, not subscriptions.
+        root.innerHTML = entries.map((e) => renderEntry(e, false)).join("");
       }
 
       load().catch((err) => {

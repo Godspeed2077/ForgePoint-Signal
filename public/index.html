@@ -3,10 +3,10 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>ForgePoint Signal — Live x402-Monetized MCP Server on Base Mainnet</title>
+    <title>ForgePoint Signal — Archived Reference Implementation (ForgePoint Industries)</title>
     <meta
       name="description"
-      content="A working production proof of the monetized-MCP build pattern: cron + Claude parse + Supabase + MCP server + x402 micropayments on Base mainnet. Federal regulatory data, free to read here, $0.10 USDC per call for AI agents."
+      content="Archived reference implementation under ForgePoint Industries. Built May 2026 as a working proof of the monetized-MCP build pattern: cron + Claude parse + Supabase + MCP server + x402 micropayments on Base mainnet. Preserved as a historical artifact and portfolio piece."
     />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -583,18 +583,19 @@
     <main>
       <section class="hero">
         <div class="container">
-          <span class="eyebrow">Live Production Proof</span>
-          <h1>A monetized MCP server on Base mainnet — running daily.</h1>
+          <span class="eyebrow">Archived · ForgePoint Industries Portfolio</span>
+          <h1>An archived reference implementation. Kept up as a portfolio artifact.</h1>
           <p class="tagline">
-            Federal regulatory updates, parsed by Claude, served over MCP,
-            with x402 micropayments wired in. Free to read here.
-            $0.10 USDC per call for AI agents. Built as a working reference
-            for the monetized-data-pipeline pattern — full source on GitHub.
+            Built May 2026 as a live production proof of the monetized-MCP build pattern:
+            cron + Claude parse + Supabase + MCP server + x402 micropayments on Base mainnet.
+            Federal regulatory updates, parsed by Claude, served over MCP.
+            Preserved here as a reference and a portfolio artifact under
+            ForgePoint Industries. Full source on GitHub.
           </p>
           <div class="trust-row">
             <span>Federal Register + IRS Internal Revenue Bulletin</span>
-            <span>Updated every 24 hours</span>
-            <span>x402 on Base mainnet</span>
+            <span>Reference implementation (archived)</span>
+            <span>x402 on Base mainnet — built but no longer the active focus</span>
           </div>
         </div>
       </section>
@@ -612,26 +613,26 @@
       <section class="connect" id="connect" style="border-top:1px solid var(--border); padding:64px 0;">
         <div class="container">
           <span class="eyebrow">Connect</span>
-          <h2 style="font-family:'Source Serif 4',Georgia,serif; font-size:32px; margin:8px 0 16px;">Three ways to use this</h2>
-          <p style="color:var(--text-muted); margin-bottom:32px;">This MCP server is live on Base mainnet. Pick the path that matches what you're here to do.</p>
+          <h2 style="font-family:'Source Serif 4',Georgia,serif; font-size:32px; margin:8px 0 16px;">What this was — and how to read it now</h2>
+          <p style="color:var(--text-muted); margin-bottom:32px;">This site was a live, working production proof of the monetized-MCP + x402 build pattern. It is preserved here under ForgePoint Industries as a portfolio artifact. The active commercial push has been wound down; the code, the architecture, and the writeups remain public.</p>
 
-          <h3 style="font-size:18px; margin-top:28px; margin-bottom:8px;">For human readers</h3>
-          <p style="color:var(--text-muted); margin:0 0 8px;">Everything above is free. Browse the feed, click through to the original Federal Register or IRB source. No signup, no paywall.</p>
+          <h3 style="font-size:18px; margin-top:28px; margin-bottom:8px;">If you want to read the regulatory feed</h3>
+          <p style="color:var(--text-muted); margin:0 0 8px;">Everything above remains free to browse. Federal Register + IRS Internal Revenue Bulletin items, parsed and summarized by Claude. Click through to the original source for the legal text.</p>
 
-          <h3 style="font-size:18px; margin-top:28px; margin-bottom:8px;">For AI agents</h3>
-          <p style="color:var(--text-muted); margin:0 0 12px;">Point any MCP client at <code style="background:var(--surface); padding:2px 6px; border-radius:4px; border:1px solid var(--border); font-size:13px;">https://forgepointsignal.com/mcp</code>. <code style="background:var(--surface); padding:2px 6px; border-radius:4px; border:1px solid var(--border); font-size:13px;">preview_regulations</code> is free; the rest are metered at $0.10 USDC on Base mainnet via x402 — no API keys, no signup, the payment is the auth.</p>
+          <h3 style="font-size:18px; margin-top:28px; margin-bottom:8px;">If you want to see the x402 + MCP architecture</h3>
+          <p style="color:var(--text-muted); margin:0 0 12px;">The MCP endpoint at <code style="background:var(--surface); padding:2px 6px; border-radius:4px; border:1px solid var(--border); font-size:13px;">https://forgepointsignal.com/mcp</code> demonstrates the build pattern: cron-fetched regulatory data parsed by Claude, served over the Model Context Protocol, with x402 payment handshake wired in. The endpoint is preserved as part of the archive but is no longer being actively marketed. Read the source for the implementation details.</p>
           <pre style="background:var(--surface); border:1px solid var(--border); padding:16px; border-radius:8px; overflow-x:auto; font-size:13px; margin:12px 0 0; color:var(--text);"><code>{"mcpServers":{"forgepoint-signal":{"url":"https://forgepointsignal.com/mcp"}}}</code></pre>
 
-          <h3 style="font-size:18px; margin-top:28px; margin-bottom:8px;">For builders shipping a similar stack</h3>
-          <p style="color:var(--text-muted); margin:0;">Full source at <a href="https://github.com/Godspeed2077/ForgePoint-Signal" target="_blank" rel="noopener noreferrer">github.com/Godspeed2077/ForgePoint-Signal</a>. Build pattern writeup on <a href="https://dev.to/godspeed2077" target="_blank" rel="noopener noreferrer">dev.to</a>. If you're shipping cron + parse + MCP + x402 yourself and hit a wall, open a GitHub issue or DM me.</p>
+          <h3 style="font-size:18px; margin-top:28px; margin-bottom:8px;">If you want to build something similar</h3>
+          <p style="color:var(--text-muted); margin:0;">Full source at <a href="https://github.com/Godspeed2077/ForgePoint-Signal" target="_blank" rel="noopener noreferrer">github.com/Godspeed2077/ForgePoint-Signal</a>. Build pattern writeup on <a href="https://dev.to/godspeed2077" target="_blank" rel="noopener noreferrer">dev.to</a>. Fork it freely. If you ship something with it, an email is appreciated but not required.</p>
         </div>
       </section>
     </main>
 
     <footer class="site" id="pricing">
       <div class="container">
-        <div>© 2026 ForgePoint Signal · <a href="/privacy">Privacy</a> · <a href="/terms">Terms</a></div>
-        <div>Sources: Federal Register + IRS Internal Revenue Bulletin · Not legal advice</div>
+        <div>© 2026 ForgePoint Industries · ForgePoint Signal is an archived reference implementation · <a href="/privacy">Privacy</a> · <a href="/terms">Terms</a></div>
+        <div>Sources: Federal Register + IRS Internal Revenue Bulletin · Not legal advice · Status: archived</div>
       </div>
     </footer>
 

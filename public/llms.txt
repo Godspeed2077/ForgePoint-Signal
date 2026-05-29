@@ -1,37 +1,53 @@
-# ForgePoint Signal
+# ForgePoint Signal — Archived Reference Implementation
 
-ForgePoint Signal monitors US federal and state regulatory changes affecting estate, trust, gift, and inheritance tax law. Estate, gift, trust, and inheritance tax regulatory changes monitored daily from the Federal Register and IRS Internal Revenue Bulletin, parsed by AI into structured JSON, and served via MCP.
+> Status: archived May 2026 under ForgePoint Industries. The site is preserved as a portfolio artifact and a reference implementation, not as an active commercial offering.
 
-## MCP Server
+ForgePoint Signal was a working production proof of the monetized-MCP build pattern: a daily-updated feed of US federal regulatory changes (Federal Register + IRS Internal Revenue Bulletin), parsed by Claude into structured JSON, and served via MCP with x402 micropayments wired in on Base mainnet.
+
+## What this is now
+
+- A read-only feed of regulatory updates at https://forgepointsignal.com (free, no signup).
+- A live MCP endpoint demonstrating the x402 + MCP architecture pattern.
+- A full open-source repo at https://github.com/Godspeed2077/ForgePoint-Signal.
+- A dev.to writeup at https://dev.to/godspeed2077.
+
+## MCP Server (architecture demonstration)
+
 Endpoint: https://forgepointsignal.com/mcp
 Transport: HTTP POST with SSE
 Protocol: MCP 2024-11-05
 
+The endpoint remains live so the architecture can be inspected. It is no longer being actively marketed or supported. The tools below were originally priced at $0.10 USDC per call via x402 on Base mainnet; that pricing wiring is preserved in the code as part of the reference implementation.
+
 ## Tools
 
-### preview_regulations (FREE)
+### preview_regulations (free)
 Returns the 5 most recent regulatory entries. No payment required.
 
-### search_regulations (PAID - $0.10 USDC)
+### search_regulations (originally priced)
 Search the full database by keyword, jurisdiction, category, or impact level.
-Payment: x402, USDC on Base mainnet
 
-### get_regulation_detail (PAID - $0.10 USDC)
+### get_regulation_detail (originally priced)
 Get complete detail for a specific entry by ID.
-Payment: x402, USDC on Base mainnet
 
-### get_recent_by_impact (PAID - $0.10 USDC)
+### get_recent_by_impact (originally priced)
 Get recent entries filtered by impact level (high/medium/low).
-Payment: x402, USDC on Base mainnet
 
 ## Data Sources
+
 - Federal Register (federalregister.gov)
 - IRS Internal Revenue Bulletin (irs.gov/irb)
 
 ## Update Frequency
-Daily via automated cron (Federal Register + IRS Internal Revenue Bulletin)
 
-## Use Cases
+Daily via automated cron (Federal Register + IRS Internal Revenue Bulletin).
+
+## Use Cases (historical positioning)
+
 - Daily regulatory briefings for estate attorneys
 - Monitoring material tax law changes
 - AI agent research on US inheritance and gift tax updates
+
+## License
+
+Source code under the project's original license. See https://github.com/Godspeed2077/ForgePoint-Signal for details.

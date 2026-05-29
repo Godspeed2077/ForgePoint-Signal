@@ -1,3 +1,7 @@
+> **Archived May 2026 under ForgePoint Industries.** This post is preserved as a historical record of what was built. The active commercial push has been wound down. The MCP endpoint remains live as an architecture demonstration; the body of this post reflects the original launch framing and is left intact as documentation. See https://github.com/Godspeed2077/ForgePoint-Signal for the source.
+
+---
+
 # How I Built a Regulatory Monitoring MCP Server with x402 Micropayments
 
 ## The Problem

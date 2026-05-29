@@ -1,3 +1,7 @@
+> **Archived May 2026 under ForgePoint Industries.** This README is preserved as a technical record of the architecture that was built. The active commercial push has been wound down. The MCP endpoint remains live as an architecture demonstration but the project is no longer being actively maintained. The site, source, and writeups stay public as a portfolio piece. Fork freely.
+
+---
+
 # ForgePoint Signal
 
 REST API tracking federal estate tax and gift tax regulatory changes.

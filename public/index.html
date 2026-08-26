@@ -1,825 +1,370 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>ForgePoint Signal — Archived Reference Implementation (ForgePoint Industries)</title>
-    <meta
-      name="description"
-      content="Archived reference implementation under ForgePoint Industries. Built May 2026 as a working proof of the monetized-MCP build pattern: cron + Claude parse + Supabase + MCP server + x402 micropayments on Base mainnet. Preserved as a historical artifact and portfolio piece."
-    />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Source+Serif+4:wght@400;500;600;700&display=swap"
-      rel="stylesheet"
-    />
-    <style>
-      :root {
-        --bg: #080c16;
-        --surface: #11182a;
-        --surface-2: #1a2340;
-        --border: #243049;
-        --border-strong: #324164;
-        --text: #e8ebf2;
-        --text-muted: #8893ae;
-        --text-dim: #5a6583;
-        --accent: #c9a961;
-        --accent-hover: #dcbc74;
-        --accent-dim: #8a7440;
-        --low-bg: rgba(46, 139, 94, 0.16);
-        --low-fg: #7ad4a8;
-        --low-border: rgba(46, 139, 94, 0.35);
-        --med-bg: rgba(188, 145, 42, 0.16);
-        --med-fg: #ecc56a;
-        --med-border: rgba(188, 145, 42, 0.4);
-        --high-bg: rgba(200, 64, 64, 0.16);
-        --high-fg: #ff8f8f;
-        --high-border: rgba(200, 64, 64, 0.4);
-      }
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Job cost reports for contractors &mdash; ForgePoint</title>
+<meta name="description" content="You send the pile of receipts and notes. I send back one page per job: what you estimated against what it actually cost, by cost code. First one is free.">
+<meta name="robots" content="index,follow">
+<link rel="canonical" href="https://forgepointsignal.com/">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://forgepointsignal.com/">
+<meta property="og:title" content="Job cost reports for contractors">
+<meta property="og:description" content="Send the pile. Get back one page per job: estimated against actual, by cost code. First one is free.">
+<meta name="theme-color" content="#EDEFEA" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#141715" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='12' fill='%23A6381F'/%3E%3Cpath d='M28 30h44M28 46h44M28 62h26' stroke='%23EDEFEA' stroke-width='9' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
 
-      * {
-        box-sizing: border-box;
-      }
-      html,
-      body {
-        margin: 0;
-        padding: 0;
-      }
-      html {
-        scroll-behavior: smooth;
-      }
-      body {
-        font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI",
-          sans-serif;
-        background: var(--bg);
-        background-image: radial-gradient(
-            ellipse 1000px 500px at 50% -100px,
-            rgba(201, 169, 97, 0.06),
-            transparent 60%
-          ),
-          radial-gradient(
-            ellipse 600px 400px at 15% 40%,
-            rgba(70, 90, 140, 0.08),
-            transparent 60%
-          );
-        background-attachment: fixed;
-        color: var(--text);
-        line-height: 1.6;
-        -webkit-font-smoothing: antialiased;
-        -moz-osx-font-smoothing: grayscale;
-        font-feature-settings: "ss01", "cv11";
-      }
+<style>
+:root{
+  --paper:#EDEFEA;
+  --card:#F6F7F3;
+  --ink:#1A1F1C;
+  --ink-soft:#4C554E;
+  --ink-faint:#78827A;
+  --rule:#CDD3C9;
+  --rule-soft:#DDE1D8;
+  --accent:#A6381F;
+  --accent-soft:#C25A3D;
+  --over:#A6381F;
+  --under:#3D6B4C;
+  --shadow:0 1px 2px rgba(26,31,28,.05), 0 12px 28px -18px rgba(26,31,28,.35);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#141715;
+    --card:#1C201D;
+    --ink:#E8EBE5;
+    --ink-soft:#A8B1A7;
+    --ink-faint:#7C857C;
+    --rule:#2E342F;
+    --rule-soft:#252A26;
+    --accent:#E0765A;
+    --accent-soft:#C25A3D;
+    --over:#E0765A;
+    --under:#7FB58F;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 12px 28px -18px rgba(0,0,0,.8);
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#141715;
+  --card:#1C201D;
+  --ink:#E8EBE5;
+  --ink-soft:#A8B1A7;
+  --ink-faint:#7C857C;
+  --rule:#2E342F;
+  --rule-soft:#252A26;
+  --accent:#E0765A;
+  --accent-soft:#C25A3D;
+  --over:#E0765A;
+  --under:#7FB58F;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 12px 28px -18px rgba(0,0,0,.8);
+}
 
-      a {
-        color: var(--accent);
-        text-decoration: none;
-      }
-      a:hover {
-        color: var(--accent-hover);
-      }
+*{box-sizing:border-box}
+body{
+  margin:0;
+  background:var(--paper);
+  color:var(--ink);
+  font-family:"Source Serif 4",Georgia,"Times New Roman",serif;
+  font-size:18px;
+  line-height:1.62;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:64rem;margin:0 auto;padding:0 1.5rem}
+.narrow{max-width:38rem}
 
-      .container {
-        max-width: 880px;
-        margin: 0 auto;
-        padding: 0 24px;
-      }
+h1,h2,h3,.lbl,.stat-n{font-family:Archivo,"Helvetica Neue",Arial,sans-serif}
+h1,h2,h3{text-wrap:balance;margin:0}
+.mono,td.num,th.num,.code{font-family:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;font-variant-numeric:tabular-nums}
 
-      header.site {
-        border-bottom: 1px solid var(--border);
-        padding: 20px 0;
-        backdrop-filter: blur(10px);
-        background: rgba(8, 12, 22, 0.7);
-        position: sticky;
-        top: 0;
-        z-index: 10;
-      }
-      header.site .container {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-      }
-      .brand {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        font-family: "Source Serif 4", Georgia, serif;
-        font-size: 20px;
-        font-weight: 600;
-        letter-spacing: -0.01em;
-      }
-      .brand-mark {
-        width: 28px;
-        height: 28px;
-        border: 1.5px solid var(--accent);
-        border-radius: 4px;
-        display: grid;
-        place-items: center;
-        color: var(--accent);
-        font-family: "Source Serif 4", Georgia, serif;
-        font-weight: 700;
-        font-size: 14px;
-      }
-      header.site nav {
-        display: flex;
-        gap: 28px;
-        align-items: center;
-      }
-      header.site nav a {
-        color: var(--text-muted);
-        font-size: 14px;
-        font-weight: 500;
-      }
-      header.site nav a:hover {
-        color: var(--text);
-      }
-      header.site .cta-sm {
-        color: var(--bg);
-        background: var(--accent);
-        padding: 8px 14px;
-        border-radius: 4px;
-        font-size: 13px;
-        font-weight: 600;
-      }
-      header.site .cta-sm:hover {
-        background: var(--accent-hover);
-        color: var(--bg);
-      }
+.lbl{
+  font-size:.72rem;font-weight:600;letter-spacing:.13em;text-transform:uppercase;
+  color:var(--ink-faint);
+}
 
-      section.hero {
-        padding: 80px 0 56px;
-        border-bottom: 1px solid var(--border);
-      }
-      .eyebrow {
-        display: inline-block;
-        font-size: 12px;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.12em;
-        color: var(--accent);
-        margin-bottom: 20px;
-      }
-      h1 {
-        font-family: "Source Serif 4", Georgia, serif;
-        font-weight: 600;
-        font-size: 48px;
-        line-height: 1.1;
-        letter-spacing: -0.02em;
-        margin: 0 0 20px;
-        max-width: 18ch;
-      }
-      .tagline {
-        font-size: 18px;
-        color: var(--text-muted);
-        max-width: 56ch;
-        margin: 0 0 32px;
-      }
-      .trust-row {
-        display: flex;
-        gap: 28px;
-        flex-wrap: wrap;
-        font-size: 13px;
-        color: var(--text-dim);
-      }
-      .trust-row span {
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-      }
-      .trust-row span::before {
-        content: "";
-        width: 6px;
-        height: 6px;
-        border-radius: 50%;
-        background: var(--accent);
-        opacity: 0.7;
-      }
+.mast{border-bottom:1px solid var(--rule)}
+.mast .wrap{display:flex;flex-wrap:wrap;gap:.75rem 1.5rem;align-items:baseline;justify-content:space-between;padding-top:1.4rem;padding-bottom:1.4rem}
+.brand{font-family:Archivo,sans-serif;font-weight:700;font-size:1.02rem;letter-spacing:-.01em}
+.brand span{color:var(--accent)}
 
-      section.feed {
-        padding: 56px 0 80px;
-      }
-      .feed-header {
-        display: flex;
-        align-items: baseline;
-        justify-content: space-between;
-        margin-bottom: 28px;
-      }
-      .feed-header h2 {
-        font-family: "Source Serif 4", Georgia, serif;
-        font-size: 24px;
-        font-weight: 600;
-        letter-spacing: -0.01em;
-        margin: 0;
-      }
-      .feed-meta {
-        font-size: 13px;
-        color: var(--text-dim);
-      }
+.hero{padding:4.5rem 0 3rem}
+.hero h1{
+  font-size:clamp(2.1rem,6.2vw,3.65rem);
+  font-weight:700;line-height:1.04;letter-spacing:-.028em;
+  max-width:17ch;
+}
+.hero .sub{margin:1.6rem 0 0;font-size:1.16rem;color:var(--ink-soft);max-width:34rem}
+.sig{margin-top:2.2rem;display:flex;align-items:center;gap:.8rem;color:var(--ink-faint);font-size:.95rem}
+.sig .bar{width:2.2rem;height:1px;background:var(--rule);flex:none}
 
-      .entry {
-        background: var(--surface);
-        border: 1px solid var(--border);
-        border-radius: 8px;
-        padding: 24px 28px;
-        margin-bottom: 16px;
-        transition: border-color 0.15s ease;
-      }
-      .entry:hover {
-        border-color: var(--border-strong);
-      }
-      .entry-meta {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        margin-bottom: 12px;
-        font-size: 13px;
-        color: var(--text-dim);
-      }
-      .entry-meta .sep {
-        color: var(--border-strong);
-      }
-      .badge {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        font-size: 11px;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.08em;
-        padding: 4px 10px;
-        border-radius: 3px;
-        border: 1px solid transparent;
-      }
-      .badge::before {
-        content: "";
-        width: 6px;
-        height: 6px;
-        border-radius: 50%;
-        background: currentColor;
-      }
-      .badge-low {
-        background: var(--low-bg);
-        color: var(--low-fg);
-        border-color: var(--low-border);
-      }
-      .badge-medium {
-        background: var(--med-bg);
-        color: var(--med-fg);
-        border-color: var(--med-border);
-      }
-      .badge-high {
-        background: var(--high-bg);
-        color: var(--high-fg);
-        border-color: var(--high-border);
-      }
-      .badge-none {
-        background: rgba(140, 150, 180, 0.1);
-        color: var(--text-dim);
-        border-color: var(--border);
-      }
-      .entry h3 {
-        font-family: "Source Serif 4", Georgia, serif;
-        font-weight: 600;
-        font-size: 20px;
-        line-height: 1.3;
-        letter-spacing: -0.005em;
-        margin: 0 0 10px;
-        color: var(--text);
-      }
-      .entry-summary {
-        color: var(--text-muted);
-        font-size: 15px;
-        margin: 0 0 14px;
-      }
-      .entry-footer {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        font-size: 13px;
-      }
-      .entry-footer a {
-        color: var(--text-dim);
-        font-weight: 500;
-      }
-      .entry-footer a:hover {
-        color: var(--accent);
-      }
-      .entry-footer .arrow {
-        transition: transform 0.15s ease;
-        display: inline-block;
-        margin-left: 2px;
-      }
-      .entry-footer a:hover .arrow {
-        transform: translateX(2px);
-      }
+.sting{
+  margin:3.5rem 0 0;padding:2rem 1.75rem;
+  background:var(--card);border:1px solid var(--rule);border-radius:2px;
+  box-shadow:var(--shadow);
+}
+.sting-row{display:flex;flex-wrap:wrap;align-items:flex-end;gap:1.5rem 2.75rem}
+.stat{display:flex;flex-direction:column;gap:.3rem}
+.stat-n{font-size:1.9rem;font-weight:600;letter-spacing:-.02em;line-height:1;font-variant-numeric:tabular-nums}
+.stat-n.bad{color:var(--over)}
+.sting p{margin:1.4rem 0 0;color:var(--ink-soft);font-size:1.02rem;max-width:44rem}
 
-      .paywall {
-        position: relative;
-        margin-top: 8px;
-      }
-      .paywall-stack {
-        position: relative;
-      }
-      .entry.locked {
-        filter: blur(5px);
-        opacity: 0.55;
-        user-select: none;
-        pointer-events: none;
-      }
-      .entry.locked:nth-child(2) {
-        filter: blur(6px);
-        opacity: 0.4;
-      }
-      .entry.locked:nth-child(3) {
-        filter: blur(7px);
-        opacity: 0.25;
-      }
-      .paywall-overlay {
-        position: absolute;
-        inset: 0;
-        display: flex;
-        flex-direction: column;
-        justify-content: flex-start;
-        align-items: center;
-        padding-top: 40px;
-        background: linear-gradient(
-          to bottom,
-          rgba(8, 12, 22, 0) 0%,
-          rgba(8, 12, 22, 0.6) 20%,
-          rgba(8, 12, 22, 0.92) 50%,
-          var(--bg) 75%
-        );
-        pointer-events: none;
-      }
-      .paywall-card {
-        pointer-events: auto;
-        background: linear-gradient(180deg, #141c33 0%, #0e1526 100%);
-        border: 1px solid var(--border-strong);
-        border-radius: 10px;
-        padding: 36px 40px;
-        max-width: 520px;
-        width: calc(100% - 48px);
-        text-align: center;
-        box-shadow: 0 30px 80px -20px rgba(0, 0, 0, 0.6),
-          0 0 0 1px rgba(201, 169, 97, 0.08);
-        margin-top: 60px;
-      }
-      .paywall-icon {
-        width: 40px;
-        height: 40px;
-        border-radius: 50%;
-        background: rgba(201, 169, 97, 0.12);
-        border: 1px solid rgba(201, 169, 97, 0.3);
-        display: grid;
-        place-items: center;
-        margin: 0 auto 20px;
-        color: var(--accent);
-      }
-      .paywall-card h3 {
-        font-family: "Source Serif 4", Georgia, serif;
-        font-size: 24px;
-        font-weight: 600;
-        letter-spacing: -0.01em;
-        margin: 0 0 10px;
-      }
-      .paywall-card p {
-        color: var(--text-muted);
-        font-size: 15px;
-        margin: 0 0 24px;
-      }
-      .paywall-cta {
-        display: inline-block;
-        background: var(--accent);
-        color: var(--bg);
-        padding: 14px 28px;
-        border-radius: 5px;
-        font-weight: 600;
-        font-size: 15px;
-        letter-spacing: -0.005em;
-        transition: background 0.15s ease;
-      }
-      .paywall-cta:hover {
-        background: var(--accent-hover);
-        color: var(--bg);
-      }
-      .paywall-cta .price {
-        opacity: 0.75;
-        font-weight: 500;
-        margin-left: 6px;
-      }
-      .paywall-fine {
-        font-size: 12px;
-        color: var(--text-dim);
-        margin-top: 14px;
-      }
+section{padding:4rem 0}
+.sec-head{display:flex;align-items:baseline;gap:1rem;margin-bottom:2rem}
+.sec-head h2{font-size:1.6rem;font-weight:600;letter-spacing:-.018em}
+.sec-head .rule{flex:1;height:1px;background:var(--rule-soft)}
 
-      .loading,
-      .empty,
-      .error {
-        padding: 60px 24px;
-        text-align: center;
-        color: var(--text-muted);
-        font-size: 15px;
-        border: 1px dashed var(--border);
-        border-radius: 8px;
-      }
-      .error {
-        color: var(--high-fg);
-        border-color: var(--high-border);
-      }
+.cols{display:grid;gap:2.25rem;grid-template-columns:repeat(auto-fit,minmax(15rem,1fr))}
+.col h3{font-size:1.06rem;font-weight:600;margin-bottom:.5rem}
+.col p{margin:0;color:var(--ink-soft);font-size:1rem}
 
-      .login-form {
-        margin-top: 20px;
-        padding-top: 18px;
-        border-top: 1px solid var(--border);
-        text-align: left;
-      }
-      .login-label {
-        display: block;
-        font-size: 12px;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.08em;
-        color: var(--text-dim);
-        margin: 0 0 10px;
-        text-align: center;
-      }
-      .login-row {
-        display: flex;
-        gap: 8px;
-      }
-      .login-row input[type="email"] {
-        flex: 1;
-        background: var(--bg);
-        border: 1px solid var(--border-strong);
-        color: var(--text);
-        font: inherit;
-        font-size: 14px;
-        padding: 10px 12px;
-        border-radius: 4px;
-        outline: none;
-      }
-      .login-row input[type="email"]:focus {
-        border-color: var(--accent);
-      }
-      .login-row button {
-        background: transparent;
-        border: 1px solid var(--border-strong);
-        color: var(--text-muted);
-        font: inherit;
-        font-size: 14px;
-        font-weight: 500;
-        padding: 10px 16px;
-        border-radius: 4px;
-        cursor: pointer;
-        white-space: nowrap;
-      }
-      .login-row button:hover {
-        color: var(--text);
-        border-color: var(--accent);
-      }
-      .login-row button:disabled {
-        opacity: 0.5;
-        cursor: default;
-      }
-      .login-msg {
-        font-size: 12px;
-        color: var(--text-dim);
-        margin-top: 10px;
-        text-align: center;
-      }
-      .login-msg.ok {
-        color: var(--low-fg);
-      }
-      .login-msg.err {
-        color: var(--high-fg);
-      }
-      .signed-in {
-        display: flex;
-        gap: 10px;
-        align-items: center;
-        font-size: 13px;
-        color: var(--text-muted);
-      }
-      .signed-in strong {
-        color: var(--text);
-        font-weight: 500;
-      }
-      .signed-in .logout {
-        background: none;
-        border: none;
-        color: var(--text-dim);
-        cursor: pointer;
-        font: inherit;
-        padding: 0;
-        text-decoration: underline;
-        text-underline-offset: 2px;
-      }
-      .signed-in .logout:hover {
-        color: var(--accent);
-      }
+.report{
+  background:var(--card);border:1px solid var(--rule);border-radius:2px;
+  box-shadow:var(--shadow);overflow:hidden;
+}
+.report-head{padding:1.5rem 1.5rem 1.25rem;border-bottom:1px solid var(--rule)}
+.report-head .job{font-family:Archivo,sans-serif;font-weight:600;font-size:1.12rem}
+.report-head .meta{color:var(--ink-faint);font-size:.9rem;margin-top:.2rem}
+.flag{
+  margin:1.25rem 1.5rem;padding:.75rem .9rem;border-left:2px solid var(--accent);
+  background:color-mix(in srgb, var(--accent) 7%, transparent);
+  font-size:.95rem;color:var(--ink-soft);
+}
+.tbl-scroll{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:.9rem}
+th,td{padding:.62rem .75rem;text-align:left;white-space:nowrap}
+th{
+  font-family:Archivo,sans-serif;font-size:.68rem;font-weight:600;
+  letter-spacing:.09em;text-transform:uppercase;color:var(--ink-faint);
+  border-bottom:1px solid var(--rule);
+}
+th:first-child,td:first-child{padding-left:1.5rem}
+th:last-child,td:last-child{padding-right:1.5rem}
+.num{text-align:right}
+tbody tr{border-bottom:1px solid var(--rule-soft)}
+tbody tr:last-child{border-bottom:none}
+tr.total{border-top:1px solid var(--rule);font-weight:600}
+tr.total td{padding-top:.8rem;padding-bottom:.8rem}
+td.code{color:var(--ink-faint);font-size:.84rem}
+td.neg{color:var(--over)}
+td.pos{color:var(--under)}
+tr.uncoded td{color:var(--ink-faint);font-style:italic}
+tr.uncoded td.neg{color:var(--over);font-style:normal}
 
-      footer.site {
-        border-top: 1px solid var(--border);
-        padding: 32px 0;
-        color: var(--text-dim);
-        font-size: 13px;
-      }
-      footer.site .container {
-        display: flex;
-        justify-content: space-between;
-        flex-wrap: wrap;
-        gap: 12px;
-      }
-      footer.site a {
-        color: var(--text-dim);
-      }
-      footer.site a:hover {
-        color: var(--accent);
-      }
+.roll{display:grid;gap:1px;background:var(--rule-soft);border-top:1px solid var(--rule);grid-template-columns:repeat(auto-fit,minmax(11rem,1fr))}
+.roll div{background:var(--card);padding:1.1rem 1.5rem}
+.roll .v{font-family:"IBM Plex Mono",monospace;font-variant-numeric:tabular-nums;font-size:1.14rem;font-weight:500;margin-top:.25rem}
 
-      @media (max-width: 640px) {
-        h1 {
-          font-size: 36px;
-        }
-        .tagline {
-          font-size: 16px;
-        }
-        section.hero {
-          padding: 56px 0 40px;
-        }
-        .entry {
-          padding: 20px;
-        }
-        .feed-header {
-          flex-direction: column;
-          align-items: flex-start;
-          gap: 4px;
-        }
-        header.site nav a:not(.cta-sm) {
-          display: none;
-        }
-        .paywall-card {
-          padding: 28px 24px;
-        }
-      }
-    </style>
-  </head>
-  <body>
-    <header class="site">
-      <div class="container">
-        <div class="brand">
-          <div class="brand-mark">F</div>
-          ForgePoint Signal
-        </div>
-        <nav id="site-nav">
-          <a href="#feed">Updates</a>
-          <a href="#connect">Connect</a>
-          <a href="https://github.com/Godspeed2077/ForgePoint-Signal" target="_blank" rel="noopener noreferrer" class="cta-sm" id="nav-auth">GitHub</a>
-        </nav>
+.note{margin-top:1.25rem;color:var(--ink-faint);font-size:.9rem;max-width:44rem}
+
+.tiers{display:grid;gap:1px;background:var(--rule-soft);border:1px solid var(--rule);border-radius:2px;grid-template-columns:repeat(auto-fit,minmax(16rem,1fr));overflow:hidden}
+.tier{background:var(--card);padding:1.75rem 1.5rem;display:flex;flex-direction:column;gap:.55rem}
+.tier .amt{font-family:Archivo,sans-serif;font-size:1.85rem;font-weight:700;letter-spacing:-.025em;line-height:1}
+.tier.free .amt{color:var(--accent)}
+.tier p{margin:0;font-size:.98rem;color:var(--ink-soft)}
+
+.contact{border-top:1px solid var(--rule);background:var(--card)}
+.contact .wrap{padding-top:3.5rem;padding-bottom:3.5rem}
+.contact h2{font-size:1.5rem;font-weight:600;margin-bottom:1rem}
+.lines{display:flex;flex-wrap:wrap;gap:1.5rem 3rem;margin-top:1.75rem}
+.line .v{font-family:"IBM Plex Mono",monospace;font-size:1.06rem;margin-top:.25rem}
+a{color:var(--accent);text-decoration-thickness:1px;text-underline-offset:.18em}
+a:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:2px}
+
+footer{border-top:1px solid var(--rule);padding:2rem 0 3rem;color:var(--ink-faint);font-size:.88rem}
+footer .wrap{display:flex;flex-wrap:wrap;gap:.5rem 2rem;justify-content:space-between}
+
+@media (max-width:640px){
+  body{font-size:17px}
+  .hero{padding:3rem 0 2rem}
+  section{padding:3rem 0}
+}
+@media (prefers-reduced-motion:no-preference){
+  a{transition:color .15s ease}
+}
+</style>
+</head>
+<body>
+<header class="mast">
+  <div class="wrap">
+    <div class="brand">ForgePoint <span>Industries</span></div>
+    <div class="lbl">Job cost reporting &middot; Conway, Arkansas</div>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <div class="hero">
+    <div class="lbl" style="margin-bottom:1.1rem">Who puts your job numbers together?</div>
+    <h1>The work is the easy part. It&rsquo;s the pile at the end.</h1>
+    <p class="sub">Receipts in the truck. Hours on a notepad. The bid buried in an email somewhere. Send me the pile, however rough it is &mdash; you don&rsquo;t sort it, you don&rsquo;t format it, and you don&rsquo;t type anything in. That&rsquo;s the part I take.</p>
+    <div class="sig"><span class="bar"></span>Randy Rockwell &mdash; it&rsquo;s me, not a software company</div>
+  </div>
+
+  <section>
+    <div class="sec-head"><h2>What actually happens</h2><span class="rule"></span></div>
+    <div class="cols">
+      <div class="col">
+        <h3>You send what you&rsquo;ve got</h3>
+        <p>However rough it is. Photos of receipts, a spreadsheet, a notepad, the estimate. No format, no login, nothing to fill in.</p>
       </div>
-    </header>
-
-    <main>
-      <section class="hero">
-        <div class="container">
-          <span class="eyebrow">Archived · ForgePoint Industries Portfolio</span>
-          <h1>An archived reference implementation. Kept up as a portfolio artifact.</h1>
-          <p class="tagline">
-            Built May 2026 as a live production proof of the monetized-MCP build pattern:
-            cron + Claude parse + Supabase + MCP server + x402 micropayments on Base mainnet.
-            Federal regulatory updates, parsed by Claude, served over MCP.
-            Preserved here as a reference and a portfolio artifact under
-            ForgePoint Industries. Full source on GitHub.
-          </p>
-          <div class="trust-row">
-            <span>Federal Register + IRS Internal Revenue Bulletin</span>
-            <span>Reference implementation (archived)</span>
-            <span>x402 on Base mainnet — built but no longer the active focus</span>
-          </div>
-        </div>
-      </section>
-
-      <section class="feed" id="feed">
-        <div class="container">
-          <div class="feed-header">
-            <h2>Latest updates</h2>
-            <div class="feed-meta" id="feed-meta"></div>
-          </div>
-          <div id="entries"></div>
-        </div>
-      </section>
-
-      <section class="connect" id="connect" style="border-top:1px solid var(--border); padding:64px 0;">
-        <div class="container">
-          <span class="eyebrow">Connect</span>
-          <h2 style="font-family:'Source Serif 4',Georgia,serif; font-size:32px; margin:8px 0 16px;">What this was — and how to read it now</h2>
-          <p style="color:var(--text-muted); margin-bottom:32px;">This site was a live, working production proof of the monetized-MCP + x402 build pattern. It is preserved here under ForgePoint Industries as a portfolio artifact. The active commercial push has been wound down; the code, the architecture, and the writeups remain public.</p>
-
-          <h3 style="font-size:18px; margin-top:28px; margin-bottom:8px;">If you want to read the regulatory feed</h3>
-          <p style="color:var(--text-muted); margin:0 0 8px;">Everything above remains free to browse. Federal Register + IRS Internal Revenue Bulletin items, parsed and summarized by Claude. Click through to the original source for the legal text.</p>
-
-          <h3 style="font-size:18px; margin-top:28px; margin-bottom:8px;">If you want to see the x402 + MCP architecture</h3>
-          <p style="color:var(--text-muted); margin:0 0 12px;">The MCP endpoint at <code style="background:var(--surface); padding:2px 6px; border-radius:4px; border:1px solid var(--border); font-size:13px;">https://forgepointsignal.com/mcp</code> demonstrates the build pattern: cron-fetched regulatory data parsed by Claude, served over the Model Context Protocol, with x402 payment handshake wired in. The endpoint is preserved as part of the archive but is no longer being actively marketed. Read the source for the implementation details.</p>
-          <pre style="background:var(--surface); border:1px solid var(--border); padding:16px; border-radius:8px; overflow-x:auto; font-size:13px; margin:12px 0 0; color:var(--text);"><code>{"mcpServers":{"forgepoint-signal":{"url":"https://forgepointsignal.com/mcp"}}}</code></pre>
-
-          <h3 style="font-size:18px; margin-top:28px; margin-bottom:8px;">If you want to build something similar</h3>
-          <p style="color:var(--text-muted); margin:0;">Full source at <a href="https://github.com/Godspeed2077/ForgePoint-Signal" target="_blank" rel="noopener noreferrer">github.com/Godspeed2077/ForgePoint-Signal</a>. Build pattern writeup on <a href="https://dev.to/godspeed2077" target="_blank" rel="noopener noreferrer">dev.to</a>. Fork it freely. If you ship something with it, an email is appreciated but not required.</p>
-        </div>
-      </section>
-    </main>
-
-    <footer class="site" id="pricing">
-      <div class="container">
-        <div>© 2026 ForgePoint Industries · ForgePoint Signal is an archived reference implementation · <a href="/privacy">Privacy</a> · <a href="/terms">Terms</a></div>
-        <div>Sources: Federal Register + IRS Internal Revenue Bulletin · Not legal advice · Status: archived</div>
+      <div class="col">
+        <h3>I take it from there</h3>
+        <p>Every line comes back entered and coded, in a spreadsheet that&rsquo;s yours to keep. You don&rsquo;t type anything in, and if a number looks wrong you tell me and I fix it.</p>
       </div>
-    </footer>
+      <div class="col">
+        <h3>You get the page back</h3>
+        <p>One page per job, estimated against actual, by cost code. I tell you the day it&rsquo;s coming back, and both come back that day.</p>
+      </div>
+    </div>
+  </section>
 
-    <script>
-      const FREE_LIMIT = 5;
-      const TEASER_LIMIT = 3;
-      const CHECKOUT_URL = "/checkout";
+  <section>
+    <div class="sec-head"><h2>And this is what comes back</h2><span class="rule"></span></div>
 
-      const fmtDate = (iso) => {
-        if (!iso) return "";
-        const d = new Date(iso + "T00:00:00Z");
-        if (Number.isNaN(d.getTime())) return iso;
-        return d.toLocaleDateString("en-US", {
-          month: "short",
-          day: "numeric",
-          year: "numeric",
-          timeZone: "UTC",
-        });
-      };
+    <div class="sting" style="margin:0 0 2rem">
+      <div class="sting-row">
+        <div class="stat">
+          <span class="lbl">Painting &middot; budget</span>
+          <span class="stat-n mono">$3,200</span>
+        </div>
+        <div class="stat">
+          <span class="lbl">Actually spent</span>
+          <span class="stat-n mono">$3,500</span>
+        </div>
+        <div class="stat">
+          <span class="lbl">Variance</span>
+          <span class="stat-n mono bad">&minus;$300</span>
+        </div>
+        <div class="stat">
+          <span class="lbl">Of budget</span>
+          <span class="stat-n mono bad">109%</span>
+        </div>
+      </div>
+      <p>Most jobs have a line like this one. Not finding it is what costs you &mdash; because if nobody adds it up after the job closes, the same line goes into the next bid.</p>
+    </div>
 
-      const esc = (s) =>
-        String(s ?? "").replace(
-          /[&<>"']/g,
-          (c) =>
-            ({
-              "&": "&amp;",
-              "<": "&lt;",
-              ">": "&gt;",
-              '"': "&quot;",
-              "'": "&#39;",
-            })[c],
-        );
+    <div class="report">
+      <div class="report-head">
+        <div class="job">Riverbend Residence Addition</div>
+        <div class="meta mono">Job 2026-014 &middot; Riverbend Builders LLC &middot; as of August 21, 2026</div>
+      </div>
 
-      const badge = (level) => {
-        const l = (level || "").toLowerCase();
-        const label =
-          l === "low"
-            ? "Low impact"
-            : l === "medium"
-              ? "Medium impact"
-              : l === "high"
-                ? "High impact"
-                : "Unclassified";
-        const cls =
-          l === "low" || l === "medium" || l === "high"
-            ? `badge-${l}`
-            : "badge-none";
-        return `<span class="badge ${cls}">${label}</span>`;
-      };
+      <div class="flag"><strong>Check this before you rely on it.</strong> $250.00 of cost could not be matched to a cost code and is shown in the Uncoded row.</div>
 
-      const renderEntry = (e, locked = false) => {
-        const jurisdiction = e.jurisdiction || "US Federal";
-        const date = fmtDate(e.published_date);
-        const sourceLabel = e.source || "Federal Register";
-        return `
-        <article class="entry${locked ? " locked" : ""}">
-          <div class="entry-meta">
-            ${badge(e.impact_level)}
-            <span>${esc(jurisdiction)}</span>
-            <span class="sep">·</span>
-            <span>${esc(date)}</span>
-          </div>
-          <h3>${esc(e.title || "Untitled")}</h3>
-          <p class="entry-summary">${esc(e.summary || "Summary not yet available.")}</p>
-          <div class="entry-footer">
-            <a href="${esc(e.source_url || "#")}" target="_blank" rel="noopener noreferrer">
-              Read on ${esc(sourceLabel)} <span class="arrow">→</span>
-            </a>
-          </div>
-        </article>`;
-      };
+      <div class="tbl-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">Code</th>
+              <th scope="col">Cost code</th>
+              <th scope="col" class="num">Budget</th>
+              <th scope="col" class="num">Spent</th>
+              <th scope="col" class="num">Open POs</th>
+              <th scope="col" class="num">Projected</th>
+              <th scope="col" class="num">Variance</th>
+              <th scope="col" class="num">% spent</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="code">01-100</td><td>General Conditions</td>
+              <td class="num mono">$5,000.00</td><td class="num mono">$0.00</td><td class="num mono">&mdash;</td>
+              <td class="num mono">$0.00</td><td class="num mono pos">$5,000.00</td><td class="num mono">0%</td>
+            </tr>
+            <tr>
+              <td class="code">03-300</td><td>Cast-In-Place Concrete</td>
+              <td class="num mono">$1,500.00</td><td class="num mono">$1,250.00</td><td class="num mono">&mdash;</td>
+              <td class="num mono">$1,250.00</td><td class="num mono pos">$250.00</td><td class="num mono">83%</td>
+            </tr>
+            <tr>
+              <td class="code">06-100</td><td>Rough Carpentry</td>
+              <td class="num mono">$9,150.00</td><td class="num mono">$5,490.00</td><td class="num mono">$3,660.00</td>
+              <td class="num mono">$9,150.00</td><td class="num mono">$0.00</td><td class="num mono">60%</td>
+            </tr>
+            <tr>
+              <td class="code">09-900</td><td>Painting</td>
+              <td class="num mono">$3,200.00</td><td class="num mono">$3,500.00</td><td class="num mono">&mdash;</td>
+              <td class="num mono">$3,500.00</td><td class="num mono neg">&minus;$300.00</td><td class="num mono neg">109%</td>
+            </tr>
+            <tr class="uncoded">
+              <td class="code">&mdash;</td><td>Uncoded</td>
+              <td class="num mono">$0.00</td><td class="num mono">$250.00</td><td class="num mono">&mdash;</td>
+              <td class="num mono">$250.00</td><td class="num mono neg">&minus;$250.00</td><td class="num mono">&mdash;</td>
+            </tr>
+            <tr class="total">
+              <td class="code"></td><td>Total</td>
+              <td class="num mono">$18,850.00</td><td class="num mono">$10,490.00</td><td class="num mono">$3,660.00</td>
+              <td class="num mono">$14,150.00</td><td class="num mono">$4,700.00</td><td class="num mono">56%</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
 
-      // Paywall overlay removed — site repositioned as live build-pattern proof,
-      // not a subscription product. Stripe checkout endpoints in api/index.js
-      // remain functional but are no longer surfaced in the UI.
+      <div class="roll">
+        <div><span class="lbl">Contract + approved COs</span><div class="v">$22,800.00</div></div>
+        <div><span class="lbl">Billed to date</span><div class="v">$10,000.00</div></div>
+        <div><span class="lbl">Outstanding</span><div class="v">$2,500.00</div></div>
+        <div><span class="lbl">Retainage held (10%)</span><div class="v">$1,000.00</div></div>
+        <div><span class="lbl">Unbilled</span><div class="v">$12,800.00</div></div>
+        <div><span class="lbl">Gross profit (projected)</span><div class="v">$8,650.00</div></div>
+        <div><span class="lbl">Gross margin</span><div class="v">37.9%</div></div>
+        <div><span class="lbl">Change orders (cost)</span><div class="v">$250.00</div></div>
+      </div>
+    </div>
 
-      function renderSignedInNav(email) {
-        const nav = document.getElementById("site-nav");
-        if (!nav) return;
-        nav.innerHTML = `
-          <a href="#feed">Updates</a>
-          <span class="signed-in">
-            <span>Signed in as <strong>${esc(email)}</strong></span>
-            <button type="button" class="logout" id="logout-btn">Sign out</button>
-          </span>`;
-        const btn = document.getElementById("logout-btn");
-        btn?.addEventListener("click", async () => {
-          await fetch("/auth/logout", { method: "POST", credentials: "same-origin" });
-          window.location.reload();
-        });
-      }
+    <p class="note"><strong>This is a sample.</strong> Riverbend Builders is not a real client and these are made-up numbers &mdash; but the format is exactly what comes back to you. Projected cost assumes a vendor bill relieves the purchase order on the same cost code, so a fully billed PO isn&rsquo;t counted twice. Retainage is figured at the job&rsquo;s default rate against amounts billed.</p>
+  </section>
 
-      function attachLoginHandler() {
-        const form = document.getElementById("login-form");
-        if (!form) return;
-        form.addEventListener("submit", async (e) => {
-          e.preventDefault();
-          const emailInput = document.getElementById("login-email");
-          const msg = document.getElementById("login-msg");
-          const submit = document.getElementById("login-submit");
-          const email = emailInput.value.trim();
-          if (!email) return;
-          submit.disabled = true;
-          msg.className = "login-msg";
-          msg.textContent = "Sending…";
-          try {
-            const res = await fetch("/auth/send-link", {
-              method: "POST",
-              headers: { "content-type": "application/json" },
-              credentials: "same-origin",
-              body: JSON.stringify({ email }),
-            });
-            if (res.ok) {
-              msg.className = "login-msg ok";
-              msg.textContent =
-                "Check your inbox. If you have an active subscription, a sign-in link is on its way.";
-              emailInput.value = "";
-            } else {
-              const body = await res.json().catch(() => ({}));
-              msg.className = "login-msg err";
-              msg.textContent = body.error || `Request failed (${res.status}).`;
-            }
-          } catch (err) {
-            msg.className = "login-msg err";
-            msg.textContent = err.message || "Request failed.";
-          } finally {
-            submit.disabled = false;
-          }
-        });
-      }
+  <section>
+    <div class="sec-head"><h2>What it costs</h2><span class="rule"></span></div>
+    <div class="tiers">
+      <div class="tier free">
+        <span class="lbl">First job</span>
+        <span class="amt">Free</span>
+        <p>One closed job, done properly. Your numbers typed up clean, plus the job page. If it isn&rsquo;t useful you say so and that&rsquo;s the end of it.</p>
+      </div>
+      <div class="tier">
+        <span class="lbl">Back catalogue</span>
+        <span class="amt">$2,500</span>
+        <p>Ten to twenty closed jobs, a page each, ranked worst to best, and what to change on the next bid. Minimum eight jobs.</p>
+      </div>
+      <div class="tier">
+        <span class="lbl">Ongoing</span>
+        <span class="amt">$250<span style="font-size:1rem;font-weight:500">/mo</span></span>
+        <p>Every job as it closes, plus whether last month&rsquo;s flags actually moved. Invoiced, not subscribed.</p>
+      </div>
+    </div>
+    <p class="note">Paid work is a Stripe invoice &mdash; bank transfer or card. Nothing is stored, nothing recurs, and there&rsquo;s nothing to cancel. You pay after the work is in your hands.</p>
+  </section>
 
-      async function fetchAuthState() {
-        try {
-          const res = await fetch("/auth/me", {
-            credentials: "same-origin",
-            headers: { accept: "application/json" },
-          });
-          if (!res.ok) return { authenticated: false };
-          return await res.json();
-        } catch {
-          return { authenticated: false };
-        }
-      }
+</div>
 
-      async function load() {
-        const root = document.getElementById("entries");
-        const meta = document.getElementById("feed-meta");
-        root.innerHTML = '<div class="loading">Loading latest updates…</div>';
+<div class="contact">
+  <div class="wrap">
+    <h2>If you want the free one</h2>
+    <p class="narrow" style="margin:0;color:var(--ink-soft)">Call, or write and tell me roughly what you&rsquo;ve got. If I don&rsquo;t pick up, leave your name and what it&rsquo;s about so I know who I&rsquo;m calling back &mdash; and I will.</p>
+    <div class="lines">
+      <div class="line">
+        <span class="lbl">Phone</span>
+        <div class="v"><a href="tel:+15014590937">501&#8209;459&#8209;0937</a></div>
+      </div>
+      <div class="line">
+        <span class="lbl">Email</span>
+        <div class="v"><a href="mailto:forge.point.industries@gmail.com">forge.point.industries@gmail.com</a></div>
+      </div>
+    </div>
+  </div>
+</div>
 
-        const [auth, entriesRes] = await Promise.all([
-          fetchAuthState(),
-          fetch("/entries", {
-            credentials: "same-origin",
-            headers: { accept: "application/json" },
-          }),
-        ]);
-
-        const isSubscriber = Boolean(auth?.authenticated);
-        if (isSubscriber) renderSignedInNav(auth.email);
-
-        if (!entriesRes.ok) {
-          root.innerHTML = `<div class="error">Couldn't load updates: ${entriesRes.status} ${esc(entriesRes.statusText)}. Please refresh.</div>`;
-          return;
-        }
-        const data = await entriesRes.json();
-        const entries = Array.isArray(data) ? data : [];
-
-        if (entries.length === 0) {
-          root.innerHTML =
-            '<div class="empty">No updates available yet. Check back soon — the feed refreshes daily.</div>';
-          return;
-        }
-
-        const latest = entries[0]?.published_date;
-        if (latest) {
-          meta.textContent = `Most recent: ${fmtDate(latest)} · ${entries.length} shown`;
-        }
-
-        // Free for all human readers — no paywall.
-        // The revenue path is x402 micropayments via the MCP endpoint, not subscriptions.
-        root.innerHTML = entries.map((e) => renderEntry(e, false)).join("");
-      }
-
-      load().catch((err) => {
-        const root = document.getElementById("entries");
-        if (root) root.innerHTML = `<div class="error">Unexpected error: ${esc(err.message)}</div>`;
-      });
-    </script>
-  </body>
+<footer>
+  <div class="wrap">
+    <span>ForgePoint Industries &middot; Randy Rockwell &middot; 262 Pickles Gap Rd, Conway, AR 72032</span>
+    <span>If you&rsquo;d rather I didn&rsquo;t write again, just say so and I won&rsquo;t.</span>
+  </div>
+</footer>
+</body>
 </html>

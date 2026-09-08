@@ -228,20 +228,20 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:.5rem 2rem;justify-content:space-be
     <div class="sting" style="margin:0 0 2rem">
       <div class="sting-row">
         <div class="stat">
-          <span class="lbl">Painting &middot; budget</span>
-          <span class="stat-n mono">$3,200</span>
+          <span class="lbl">Fencing &middot; bid</span>
+          <span class="stat-n mono">$8,736</span>
         </div>
         <div class="stat">
-          <span class="lbl">Actually spent</span>
-          <span class="stat-n mono">$3,500</span>
+          <span class="lbl">Actually cost</span>
+          <span class="stat-n mono">$16,016</span>
         </div>
         <div class="stat">
           <span class="lbl">Variance</span>
-          <span class="stat-n mono bad">&minus;$300</span>
+          <span class="stat-n mono bad">&minus;$7,280</span>
         </div>
         <div class="stat">
-          <span class="lbl">Of budget</span>
-          <span class="stat-n mono bad">109%</span>
+          <span class="lbl">Of bid</span>
+          <span class="stat-n mono bad">183%</span>
         </div>
       </div>
       <p>Most jobs have a line like this one. Not finding it is what costs you &mdash; because if nobody adds it up after the job closes, the same line goes into the next bid.</p>
@@ -249,11 +249,9 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:.5rem 2rem;justify-content:space-be
 
     <div class="report">
       <div class="report-head">
-        <div class="job">Riverbend Residence Addition</div>
-        <div class="meta mono">Job 2026-014 &middot; Riverbend Builders LLC &middot; as of August 21, 2026</div>
+        <div class="job">Sport court and sidewalk replacement</div>
+        <div class="meta mono">Closed job &middot; bid against final, by cost code &middot; as of September 8, 2026</div>
       </div>
-
-      <div class="flag"><strong>Check this before you rely on it.</strong> $250.00 of cost could not be matched to a cost code and is shown in the Uncoded row.</div>
 
       <div class="tbl-scroll">
         <table>
@@ -266,46 +264,53 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:.5rem 2rem;justify-content:space-be
               <th scope="col" class="num">Open POs</th>
               <th scope="col" class="num">Projected</th>
               <th scope="col" class="num">Variance</th>
-              <th scope="col" class="num">% spent</th>
+              <th scope="col" class="num">% of budget</th>
             </tr>
           </thead>
           <tbody>
             <tr>
               <td class="code">01-100</td><td>General Conditions</td>
-              <td class="num mono">$5,000.00</td><td class="num mono">$0.00</td><td class="num mono">&mdash;</td>
-              <td class="num mono">$0.00</td><td class="num mono pos">$5,000.00</td><td class="num mono">0%</td>
+              <td class="num mono">$10,500.00</td><td class="num mono">$12,500.00</td><td class="num mono">$0.00</td>
+              <td class="num mono">$12,500.00</td><td class="num mono neg">&minus;$2,000.00</td><td class="num mono neg">119%</td>
+            </tr>
+            <tr>
+              <td class="code">02-400</td><td>Site Cleanup and Disposal</td>
+              <td class="num mono">$11,567.23</td><td class="num mono">$11,567.23</td><td class="num mono">$0.00</td>
+              <td class="num mono">$11,567.23</td><td class="num mono">$0.00</td><td class="num mono">100%</td>
             </tr>
             <tr>
               <td class="code">03-300</td><td>Cast-In-Place Concrete</td>
-              <td class="num mono">$1,500.00</td><td class="num mono">$1,250.00</td><td class="num mono">&mdash;</td>
-              <td class="num mono">$1,250.00</td><td class="num mono pos">$250.00</td><td class="num mono">83%</td>
+              <td class="num mono">$43,302.20</td><td class="num mono">$56,224.20</td><td class="num mono">$0.00</td>
+              <td class="num mono">$56,224.20</td><td class="num mono neg">&minus;$12,922.00</td><td class="num mono neg">130%</td>
             </tr>
             <tr>
-              <td class="code">06-100</td><td>Rough Carpentry</td>
-              <td class="num mono">$9,150.00</td><td class="num mono">$5,490.00</td><td class="num mono">$3,660.00</td>
-              <td class="num mono">$9,150.00</td><td class="num mono">$0.00</td><td class="num mono">60%</td>
+              <td class="code">31-200</td><td>Earthwork</td>
+              <td class="num mono">$13,172.20</td><td class="num mono">$15,112.88</td><td class="num mono">$0.00</td>
+              <td class="num mono">$15,112.88</td><td class="num mono neg">&minus;$1,940.68</td><td class="num mono neg">115%</td>
             </tr>
             <tr>
-              <td class="code">09-900</td><td>Painting</td>
-              <td class="num mono">$3,200.00</td><td class="num mono">$3,500.00</td><td class="num mono">&mdash;</td>
-              <td class="num mono">$3,500.00</td><td class="num mono neg">&minus;$300.00</td><td class="num mono neg">109%</td>
+              <td class="code">32-100</td><td>Site Paving</td>
+              <td class="num mono">$19,795.34</td><td class="num mono">$22,595.34</td><td class="num mono">$0.00</td>
+              <td class="num mono">$22,595.34</td><td class="num mono neg">&minus;$2,800.00</td><td class="num mono neg">114%</td>
             </tr>
-            <tr class="uncoded">
-              <td class="code">&mdash;</td><td>Uncoded</td>
-              <td class="num mono">$0.00</td><td class="num mono">$250.00</td><td class="num mono">&mdash;</td>
-              <td class="num mono">$250.00</td><td class="num mono neg">&minus;$250.00</td><td class="num mono">&mdash;</td>
+            <tr>
+              <td class="code">32-300</td><td>Fencing</td>
+              <td class="num mono">$8,736.00</td><td class="num mono">$16,016.00</td><td class="num mono">$0.00</td>
+              <td class="num mono">$16,016.00</td><td class="num mono neg">&minus;$7,280.00</td><td class="num mono neg">183%</td>
+            </tr>
+            <tr>
+              <td class="code">32-900</td><td>Landscaping</td>
+              <td class="num mono">$5,043.00</td><td class="num mono">$5,043.00</td><td class="num mono">$0.00</td>
+              <td class="num mono">$5,043.00</td><td class="num mono">$0.00</td><td class="num mono">100%</td>
             </tr>
             <tr class="total">
               <td class="code"></td><td>Total</td>
-              <td class="num mono">$18,850.00</td><td class="num mono">$10,490.00</td><td class="num mono">$3,660.00</td>
-              <td class="num mono">$14,150.00</td><td class="num mono">$4,700.00</td><td class="num mono">56%</td>
+              <td class="num mono">$112,115.97</td><td class="num mono">$139,058.65</td><td class="num mono">$0.00</td>
+              <td class="num mono">$139,058.65</td><td class="num mono neg">&minus;$26,942.68</td><td class="num mono neg">124%</td>
             </tr>
           </tbody>
         </table>
       </div>
-
-      <div class="roll">
-        <div><span class="lbl">Contract + approved COs</span><div class="v">$22,800.00</div></div>
         <div><span class="lbl">Billed to date</span><div class="v">$10,000.00</div></div>
         <div><span class="lbl">Outstanding</span><div class="v">$2,500.00</div></div>
         <div><span class="lbl">Retainage held (10%)</span><div class="v">$1,000.00</div></div>
@@ -316,7 +321,7 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:.5rem 2rem;justify-content:space-be
       </div>
     </div>
 
-    <p class="note"><strong>This is a sample.</strong> Riverbend Builders is not a real client and these are made-up numbers &mdash; but the format is exactly what comes back to you.</p>
+    <p class="note"><strong>This is a real job.</strong> A city&rsquo;s 2024 sport-court and sidewalk replacement, taken from the public record: the bid on each line against what it finished at, including a $2,000 penalty for finishing four days late. The city, the contractor and the project number are removed. The numbers are not changed. <a href="/sample-page.pdf">Download the page (PDF)</a> &mdash; it is the same file that comes back to you.</p>
   </section>
 
   <section>
